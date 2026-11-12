@@ -58,7 +58,16 @@ export default function LoginPage() {
       signIn(data, rememberMe);
 
       // الرجوع تلقائياً للصفحة السابقة
-      navigate(previousPath, { replace: true });
+      navigate(previousPath, {
+        replace: true,
+        state: location.state?.bookingDraft
+          ? {
+              bookingDraft: location.state.bookingDraft,
+              trip: location.state.trip,
+              returnTo: location.state.returnTo,
+            }
+          : null,
+      });
     } catch (err) {
       setSuccess(false);
       setError(
