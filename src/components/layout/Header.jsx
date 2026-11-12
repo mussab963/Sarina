@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import Logo from "../../assets/logo.svg";
+import AuthStatus from "../Auth/AuthStatus";
 
 // Navigation links
 const navLinks = [
@@ -236,42 +237,10 @@ function Header() {
               {darkMode ? <Sun size={19} /> : <Moon size={19} />}
             </button>
 
-            {/* Login */}
-            <Link
-              to="/login"
-              className="
-                hidden whitespace-nowrap
-                text-[12px] font-extrabold
-                text-foreground
-                transition-colors hover:text-primary
-                dark:text-[#eef8fa]
-                min-[651px]:inline-flex
-              "
-            >
-              دخول
-            </Link>
-
-            {/* Register */}
-            <Link
-              to="/register"
-              className="
-                hidden min-h-10 items-center
-                justify-center gap-[10px]
-                whitespace-nowrap rounded-[10px]
-                bg-navy px-[15px] py-2
-                text-[12px] font-extrabold text-white
-                transition-all duration-200
-
-                hover:-translate-y-[3px]
-                hover:bg-[#174d61]
-
-                dark:bg-[#0e2634]
-                min-[651px]:inline-flex
-              "
-            >
-              إنشاء حساب
-              <ArrowLeft size={16} />
-            </Link>
+            {/* Authentication */}
+            <div className="hidden min-[901px]:block">
+              <AuthStatus />
+            </div>
 
             {/* Mobile Toggle */}
             <button
@@ -330,24 +299,13 @@ function Header() {
               </NavLink>
             ))}
 
-            {/* Account Links */}
-            <NavLink
-              to="/login"
+            {/* Mobile Authentication */}
+            <div
+              className="border-t border-border pt-4 dark:border-[#254252]"
               onClick={closeMenu}
-              className={mobileLinkClass}
             >
-              تسجيل الدخول
-              <ChevronLeft size={16} />
-            </NavLink>
-
-            <NavLink
-              to="/register"
-              onClick={closeMenu}
-              className={mobileLinkClass}
-            >
-              إنشاء حساب
-              <ChevronLeft size={16} />
-            </NavLink>
+              <AuthStatus />
+            </div>
           </nav>
         )}
       </header>
