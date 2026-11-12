@@ -1,7 +1,6 @@
 
 /**
  * Sairna Website API
- *
  * الاتصال بالـ Backend الخاص بالمسافرين.
  * لا نستخدم بيانات Dashboard أو Admin هنا.
  */
@@ -10,22 +9,6 @@ const API_BASE =
   "https://sairna.abdulrahman-hares.com/api/v1/website";
 
 // إرسال طلب GET
- {
-  let response;
-
-  try {
-    response = await fetch(`${API_BASE}${path}`, {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-      },
-      signal,
-    });
-  } 
-} catch (error) {
-  if (error?.name === "AbortError") {
-    throw error;
-  }
 async function get(path, signal) {
   let response;
 
@@ -505,7 +488,6 @@ export async function loadTrip(id, signal) {
  *   availableSeats
  * }
  */
-
 export async function loadSeats(id, signal) {
   const data = unwrap(
     await get(
@@ -573,7 +555,6 @@ export async function loadSeats(id, signal) {
 
   // إنشاء المقاعد للعرض على الواجهة
   // الترقيم من 1 حتى totalSeats افتراض تصميمي.
-
   return Array.from(
     { length: total },
     (_, index) => {
@@ -593,15 +574,20 @@ export async function loadSeats(id, signal) {
  */
 export async function loadCompanies(signal) {
   const payload = await get("/companies", signal);
+
   const rows = collection(payload, ["companies"]);
 
   return rows.map((raw) => {
     if (!raw || typeof raw !== "object") {
-      throw new Error("بيانات شركة النقل غير صحيحة.");
+      throw new Error(
+        "بيانات شركة النقل غير صحيحة."
+      );
     }
 
     const id =
-      raw.id ?? raw.companyId ?? raw.company_id;
+      raw.id ??
+      raw.companyId ??
+      raw.company_id;
 
     const name =
       raw.name ??
@@ -611,7 +597,9 @@ export async function loadCompanies(signal) {
 
     if (id == null || !name) {
       throw new Error(
-        `حقول الشركات غير متوافقة: ${Object.keys(raw).join(", ")}`
+        `حقول الشركات غير متوافقة: ${Object.keys(
+          raw
+        ).join(", ")}`
       );
     }
 
@@ -622,7 +610,9 @@ export async function loadCompanies(signal) {
       raw.rating ?? raw.averageRating ?? null;
 
     const destinations =
-      raw.destinationsCount ?? raw.routesCount ?? null;
+      raw.destinationsCount ??
+      raw.routesCount ??
+      null;
 
     return {
       id: String(id),
@@ -641,13 +631,18 @@ export async function loadCompanies(signal) {
             .map((item) =>
               typeof item === "string"
                 ? item
-                : String(item?.name ?? item?.label ?? "")
+                : String(
+                    item?.name ??
+                    item?.label ??
+                    ""
+                  )
             )
             .filter(Boolean)
         : [],
 
       rating:
-        rating != null && Number.isFinite(Number(rating))
+        rating != null &&
+        Number.isFinite(Number(rating))
           ? Number(rating)
           : null,
 
