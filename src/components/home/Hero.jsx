@@ -1,7 +1,20 @@
-import { CircleCheck, MapPin, ShieldCheck, Sparkles, Star } from "lucide-react";
+import { useState } from "react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  MapPin,
+  ShieldCheck,
+  Sparkles,
+  Star,
+} from "lucide-react";
 
-import HeroImage from "../../assets/hero.svg";
 import SearchForm from "./SearchForm";
+
+// نفس مصادر صورة دمشق المستخدمة بالتصميم الجديد.
+const HERO_IMAGES = [
+  "https://wsrv.nl/?url=upload.wikimedia.org/wikipedia/commons/6/68/Syria%2C_Damascus%2C_The_Umayyad_Mosque.jpg&w=1100&q=85",
+  "https://upload.wikimedia.org/wikipedia/commons/6/68/Syria,_Damascus,_The_Umayyad_Mosque.jpg",
+];
 
 const containerClass = `
   mx-auto w-[calc(100%-68px)] max-w-[1216px]
@@ -9,19 +22,31 @@ const containerClass = `
   max-[650px]:w-[calc(100%-34px)]
 `;
 
-const features = ["حجز سهل", "خيارات متنوعة", "متابعة رحلتك"];
+const floatingCardClass = `
+  absolute z-10 flex items-center gap-[10px]
+  rounded-2xl bg-white px-4 py-3
+  text-[#114252]
+  shadow-[0_15px_28px_rgba(15,61,69,0.17)]
+  motion-safe:animate-[sairna-float_9s_ease-in-out_infinite]
+  max-[900px]:p-[9px]
+`;
 
 function Hero() {
+  const [imageIndex, setImageIndex] = useState(0);
+  const imageAvailable = imageIndex < HERO_IMAGES.length;
+
   return (
     <section
       className="
         relative overflow-hidden
         bg-[linear-gradient(160deg,#f5fbfa_0%,#f8fbfc_56%,#f3f9f7_100%)]
-        pt-[65px] pb-[71px]
+        py-[65px] pb-[71px]
         dark:bg-[linear-gradient(160deg,#102f3d,#0b1c29)]
-        max-[650px]:pt-8 max-[650px]:pb-[52px]
+        max-[650px]:pt-8
+        max-[650px]:pb-[52px]
       "
     >
+      {/* Decorative glow */}
       <div
         aria-hidden="true"
         className="
@@ -33,6 +58,7 @@ function Hero() {
       />
 
       <div className={containerClass}>
+        {/* Hero grid */}
         <div
           className="
             grid min-h-[420px]
@@ -44,7 +70,7 @@ function Hero() {
             max-[650px]:gap-0
           "
         >
-          {/* Hero Content */}
+          {/* Text content */}
           <div
             className="
               relative z-10 pb-[34px]
@@ -68,7 +94,7 @@ function Hero() {
 
             <h1
               className="
-                my-[19px] mb-[11px]
+                mt-[19px] mb-[11px]
                 text-[clamp(48px,5.15vw,79px)]
                 leading-[1.33] font-black
                 tracking-[-2.4px]
@@ -97,10 +123,9 @@ function Hero() {
               className="
                 mb-[22px] max-w-[485px]
                 text-base leading-[2.15]
-                text-muted dark:text-[#9eb3be]
+                text-muted
                 max-[1150px]:text-sm
                 max-[900px]:text-xs
-                max-[650px]:max-w-[480px]
                 max-[650px]:text-[13px]
                 max-[650px]:leading-[2]
               "
@@ -109,7 +134,7 @@ function Hero() {
               مقعدك، وخلّي الطريق علينا.
             </p>
 
-            {/* Features */}
+            {/* Benefits */}
             <div
               className="
                 flex flex-wrap items-center gap-5
@@ -117,9 +142,9 @@ function Hero() {
                 max-[650px]:gap-[13px]
               "
             >
-              {features.map((feature) => (
+              {["حجز سهل", "خيارات متنوعة", "متابعة رحلتك"].map((item) => (
                 <span
-                  key={feature}
+                  key={item}
                   className="
                     flex items-center gap-[6px]
                     text-[11px] font-extrabold
@@ -128,13 +153,13 @@ function Hero() {
                     max-[900px]:text-[10px]
                   "
                 >
-                  <CircleCheck size={17} className="text-primary" />
-                  {feature}
+                  <CheckCircle2 size={17} className="shrink-0 text-primary" />
+                  {item}
                 </span>
               ))}
             </div>
 
-            {/* Social Proof */}
+            {/* Social proof */}
             <div
               className="
                 mt-10 flex items-center gap-[14px]
@@ -150,13 +175,17 @@ function Hero() {
                   ["ر", "#b9d2ed"],
                 ].map(([letter, color], index) => (
                   <span
-                    key={index}
-                    style={{ backgroundColor: color }}
+                    key={letter}
+                    style={{
+                      backgroundColor: color,
+                      marginRight: index === 0 ? 0 : -7,
+                    }}
                     className="
-                      -ml-[7px] grid h-[35px] w-[35px]
-                      place-items-center rounded-full
-                      border-[3px] border-white
-                      font-black text-[#5e3a36]
+                      grid h-[35px] w-[35px]
+                      place-items-center
+                      rounded-full border-[3px]
+                      border-white text-xs font-black
+                      text-[#5e3a36]
                       dark:border-[#112b3b]
                     "
                   >
@@ -166,13 +195,19 @@ function Hero() {
               </div>
 
               <div>
-                <div className="flex items-center gap-1 text-[#f7b843]">
+                <div className="flex items-center gap-[3px]">
                   {Array.from({ length: 5 }, (_, index) => (
-                    <Star key={index} size={14} />
+                    <Star
+                      key={index}
+                      size={14}
+                      fill="currentColor"
+                      className="text-[#f7b843]"
+                    />
                   ))}
-                  <b className="mr-1 text-xs text-foreground dark:text-white">
+
+                  <strong className="mr-[7px] text-xs text-foreground dark:text-white">
                     4.9/5
-                  </b>
+                  </strong>
                 </div>
 
                 <small className="text-[10px] font-bold text-muted">
@@ -182,10 +217,11 @@ function Hero() {
             </div>
           </div>
 
-          {/* Hero Image */}
+          {/* Hero image */}
           <div
             className="
-              relative min-w-0 py-[18px] pl-5
+              relative min-w-0
+              py-[18px] pr-0 pl-5
               max-[900px]:p-0
               max-[650px]:mx-[14px]
               max-[650px]:mt-[22px]
@@ -194,39 +230,79 @@ function Hero() {
           >
             <div
               className="
-                relative rotate-[-1.5deg]
-                rounded-[30px] bg-[#a8ddd2]
+                relative isolate min-h-[320px]
+                -rotate-[1.5deg]
+                rounded-[30px] bg-[#d4e4e5]
                 shadow-[0_30px_70px_rgba(10,62,70,0.15)]
+                max-[650px]:min-h-0
                 max-[650px]:rotate-0
-                max-[650px]:rounded-[20px]
               "
             >
-              <img
-                src={HeroImage}
-                alt="حافلة سيرنا حديثة على طريق بين المدن السورية"
+              {imageAvailable ? (
+                <img
+                  src={HERO_IMAGES[imageIndex]}
+                  alt="صورة للجامع الأموي في دمشق"
+                  fetchPriority="high"
+                  onError={() => setImageIndex((index) => index + 1)}
+                  className="
+                    block aspect-[1.45] w-full
+                    rounded-[30px] object-cover
+                    max-[650px]:aspect-[1.48]
+                    max-[650px]:rounded-[20px]
+                  "
+                />
+              ) : (
+                <div
+                  className="
+                    grid aspect-[1.45] place-items-center
+                    rounded-[30px] bg-[#d4e4e5]
+                    px-7 text-center text-sm
+                    font-bold text-[#54727c]
+                    max-[650px]:aspect-[1.48]
+                    max-[650px]:rounded-[20px]
+                  "
+                >
+                  تعذّر تحميل صورة دمشق. تأكد من اتصال الإنترنت.
+                </div>
+              )}
+
+              <div
+                aria-hidden="true"
                 className="
-                  aspect-[1.45] w-full rounded-[30px]
-                  object-cover
-                  max-[650px]:aspect-[1.48]
+                  pointer-events-none absolute inset-0
+                  rounded-[30px]
+                  bg-[linear-gradient(135deg,rgba(3,38,47,0.08),transparent_68%)]
                   max-[650px]:rounded-[20px]
                 "
               />
 
-              {/* Floating Card - Top */}
+              {imageAvailable && (
+                <span
+                  className="
+                    absolute bottom-[17px] left-[18px]
+                    z-[1] rounded-lg
+                    bg-[rgba(12,43,53,0.72)]
+                    px-[11px] py-[5px]
+                    text-[10px] font-bold text-white
+                    max-[650px]:bottom-[11px]
+                    max-[650px]:left-[11px]
+                    max-[650px]:text-[9px]
+                  "
+                >
+                  صورة حقيقية من دمشق
+                </span>
+              )}
+
+              {/* Floating top card */}
               <div
-                className="
-                  absolute top-9 -left-[26px]
-                  flex rotate-[1.5deg]
-                  items-center gap-[10px]
-                  rounded-2xl bg-white
-                  px-4 py-3 text-[#114252]
-                  shadow-[0_15px_28px_rgba(15,61,69,0.17)]
+                className={`
+                  ${floatingCardClass}
+                  top-9 -left-[26px]
                   max-[900px]:-left-3
-                  max-[900px]:p-[9px]
                   max-[650px]:top-[17px]
-                "
+                `}
               >
-                <MapPin size={18} className="text-primary" />
+                <MapPin size={18} className="shrink-0 text-primary" />
 
                 <div className="flex flex-col whitespace-nowrap">
                   <b className="text-xs max-[900px]:text-[10px]">14 محافظة</b>
@@ -236,19 +312,15 @@ function Hero() {
                 </div>
               </div>
 
-              {/* Floating Card - Bottom */}
+              {/* Floating bottom card */}
               <div
-                className="
-                  absolute right-[-22px] bottom-[45px]
-                  flex rotate-[1.5deg]
-                  items-center gap-[10px]
-                  rounded-2xl bg-white
-                  px-4 py-3 text-[#114252]
-                  shadow-[0_15px_28px_rgba(15,61,69,0.17)]
+                className={`
+                  ${floatingCardClass}
+                  right-[-22px] bottom-[45px]
+                  motion-safe:animate-[sairna-float_10s_ease-in-out_infinite]
                   max-[900px]:-right-3
-                  max-[900px]:p-[9px]
                   max-[650px]:bottom-[13px]
-                "
+                `}
               >
                 <span
                   className="
@@ -270,15 +342,37 @@ function Hero() {
                 </div>
               </div>
             </div>
+
+            {/* Decorative orbit circles */}
+            <div
+              aria-hidden="true"
+              className="
+                pointer-events-none absolute
+                -top-[35px] -left-[62px]
+                -z-10 h-[220px] w-[220px]
+                rounded-full border-[1.5px]
+                border-dashed border-[#99d6cc]
+              "
+            />
+            <div
+              aria-hidden="true"
+              className="
+                pointer-events-none absolute
+                right-[-50px] bottom-0
+                -z-10 h-[150px] w-[150px]
+                rounded-full border-[1.5px]
+                border-dashed border-[#99d6cc]
+              "
+            />
           </div>
         </div>
 
-        {/* Search Box */}
+        {/* Search shell */}
         <div
           className="
-            relative z-20 mt-[22px]
+            relative z-[3] mt-[22px]
             rounded-[21px] border border-border
-            bg-white px-6 pt-[22px] pb-[25px]
+            bg-surface px-6 pt-[22px] pb-[25px]
             shadow-[0_21px_58px_rgba(11,71,72,0.1)]
             dark:border-[#254252]
             dark:bg-[#112b3b]
@@ -291,10 +385,9 @@ function Hero() {
             className="
               mb-4 flex items-center
               justify-between gap-3
-              max-[650px]:items-start
             "
           >
-            <div className="flex flex-wrap items-center gap-[11px] max-[650px]:gap-[6px]">
+            <div className="flex flex-wrap items-center gap-[11px]">
               <span
                 className="
                   h-[9px] w-[9px] shrink-0
@@ -303,25 +396,20 @@ function Hero() {
                 "
               />
 
-              <strong className="text-[15px] font-bold max-[650px]:text-[13px]">
+              <strong className="text-[15px] max-[650px]:text-[13px]">
                 وين رحلتك الجاية؟
               </strong>
 
-              <span
-                className="
-                  text-[11px] text-muted
-                  max-[650px]:basis-full
-                  max-[650px]:text-[10px]
-                "
-              >
+              <span className="text-[11px] text-muted max-[650px]:basis-full max-[650px]:text-[10px]">
                 اختار وجهتك وباقي التفاصيل علينا
               </span>
             </div>
 
             <span
               className="
-                inline-flex shrink-0 items-center gap-[5px]
-                text-[10px] font-extrabold text-[#14968d]
+                flex shrink-0 items-center gap-[5px]
+                text-[10px] font-extrabold
+                text-[#14968d]
                 max-[650px]:hidden
               "
             >
@@ -333,6 +421,17 @@ function Hero() {
           <SearchForm />
         </div>
       </div>
+
+      <style>{`
+        @keyframes sairna-float {
+          0%, 100% {
+            transform: translateY(0) rotate(1.5deg);
+          }
+          50% {
+            transform: translateY(-5px) rotate(1.5deg);
+          }
+        }
+      `}</style>
     </section>
   );
 }
