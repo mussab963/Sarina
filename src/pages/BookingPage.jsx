@@ -977,13 +977,15 @@ export default function BookingPage() {
     }
 
     // قراءة جلسة المسافر
-    let token = null;
+    
+const token = (() => {
+  try {
+    return sessionStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
+})();
 
-    try {
-      token = sessionStorage.getItem(TOKEN_KEY);
-    } catch {
-      token = null;
-    }
 
     // المستخدم غير مسجل دخول
     if (!token) {
