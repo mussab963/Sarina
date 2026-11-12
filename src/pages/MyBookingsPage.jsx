@@ -1,6 +1,6 @@
-
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
+import { useAuth } from "../Context/AuthContext.jsx";
 
 import {
   Armchair,
@@ -18,19 +18,7 @@ import {
 } from "lucide-react";
 
 // Website API - خاص بالمسافرين
-const API_BASE =
-  "https://sairna.abdulrahman-hares.com/api/v1/website";
-
-// نفس المفتاح المتفق عليه مع مصعب
-const TOKEN_KEY = "sairna_passenger_access_token";
-
-function readToken() {
-  try {
-    return sessionStorage.getItem(TOKEN_KEY) ?? "";
-  } catch {
-    return "";
-  }
-}
+const API_BASE = "https://sairna.abdulrahman-hares.com/api/v1/website";
 
 const container =
   "mx-auto w-[calc(100%-34px)] max-w-[1216px] min-[651px]:w-[calc(100%-48px)] min-[1151px]:w-[calc(100%-68px)]";
@@ -49,11 +37,7 @@ function valueText(value) {
 
   if (typeof value === "object") {
     return String(
-      value.nameAr ??
-      value.name ??
-      value.name_ar ??
-      value.title ??
-      ""
+      value.nameAr ?? value.name ?? value.name_ar ?? value.title ?? "",
     );
   }
 
@@ -62,10 +46,7 @@ function valueText(value) {
 
 function first(...values) {
   return values.find(
-    (value) =>
-      value !== null &&
-      value !== undefined &&
-      value !== ""
+    (value) => value !== null && value !== undefined && value !== "",
   );
 }
 
@@ -74,11 +55,7 @@ function getList(payload) {
   let root = payload;
 
   for (let i = 0; i < 4; i += 1) {
-    if (
-      !root ||
-      typeof root !== "object" ||
-      Array.isArray(root)
-    ) {
+    if (!root || typeof root !== "object" || Array.isArray(root)) {
       break;
     }
 
@@ -109,16 +86,13 @@ function getList(payload) {
   }
 
   throw new Error(
-    "صيغة قائمة الحجوزات غير متوافقة مع الواجهة. لازم نراجع استجابة GET /bookings/me."
+    "صيغة قائمة الحجوزات غير متوافقة مع الواجهة. لازم نراجع استجابة GET /bookings/me.",
   );
 }
 
 // توحيد بيانات الحجز
 function bookingData(raw, index) {
-  const trip =
-    raw.trip ??
-    raw.tripDetails ??
-    {};
+  const trip = raw.trip ?? raw.tripDetails ?? {};
 
   const route = trip.route ?? {};
 
@@ -127,15 +101,12 @@ function bookingData(raw, index) {
     raw.bookedSeats,
     raw.bookingSeats,
     raw.seatAssignments,
-    []
+    [],
   );
 
   const seats = Array.isArray(seatsRaw)
     ? seatsRaw.map((seat) => {
-        if (
-          typeof seat !== "object" ||
-          seat === null
-        ) {
+        if (typeof seat !== "object" || seat === null) {
           return {
             number: String(seat),
             name: "",
@@ -145,25 +116,13 @@ function bookingData(raw, index) {
 
         return {
           number: valueText(
-            first(
-              seat.seatNumber,
-              seat.number,
-              seat.seat?.number
-            )
+            first(seat.seatNumber, seat.number, seat.seat?.number),
           ),
           name: valueText(
-            first(
-              seat.passengerName,
-              seat.name,
-              seat.passenger?.name
-            )
+            first(seat.passengerName, seat.name, seat.passenger?.name),
           ),
           phone: valueText(
-            first(
-              seat.passengerPhone,
-              seat.phone,
-              seat.passenger?.phone
-            )
+            first(seat.passengerPhone, seat.phone, seat.passenger?.phone),
           ),
         };
       })
@@ -174,30 +133,25 @@ function bookingData(raw, index) {
     raw.totalPrice,
     raw.total,
     raw.amount,
-    raw.price
+    raw.price,
   );
 
-  const numericAmount =
-    amount == null ? null : Number(amount);
+  const numericAmount = amount == null ? null : Number(amount);
 
   const bookingId = first(
     raw.bookingNumber,
     raw.bookingCode,
     raw.reference,
     raw.id,
-    raw.bookingId
+    raw.bookingId,
   );
 
   return {
     key: String(bookingId ?? `row-${index}`),
 
-    id:
-      valueText(bookingId) ||
-      "غير متوفر",
+    id: valueText(bookingId) || "غير متوفر",
 
-    status: valueText(
-      first(raw.status, raw.bookingStatus)
-    ),
+    status: valueText(first(raw.status, raw.bookingStatus)),
 
     origin: valueText(
       first(
@@ -205,8 +159,8 @@ function bookingData(raw, index) {
         trip.fromCity,
         trip.origin,
         route.originCity,
-        raw.originCity
-      )
+        raw.originCity,
+      ),
     ),
 
     destination: valueText(
@@ -215,69 +169,41 @@ function bookingData(raw, index) {
         trip.toCity,
         trip.destination,
         route.destinationCity,
-        raw.destinationCity
-      )
+        raw.destinationCity,
+      ),
     ),
 
     departure: valueText(
-      first(
-        trip.departureTime,
-        trip.departureAt,
-        raw.departureTime
-      )
+      first(trip.departureTime, trip.departureAt, raw.departureTime),
     ),
 
     arrival: valueText(
-      first(
-        trip.arrivalTime,
-        trip.arrivalAt,
-        raw.arrivalTime
-      )
+      first(trip.arrivalTime, trip.arrivalAt, raw.arrivalTime),
     ),
 
     date: valueText(
-      first(
-        trip.date,
-        trip.travelDate,
-        trip.departureDate,
-        raw.travelDate
-      )
+      first(trip.date, trip.travelDate, trip.departureDate, raw.travelDate),
     ),
 
-    company: valueText(
-      first(
-        trip.company,
-        trip.transportCompany,
-        raw.company
-      )
-    ),
+    company: valueText(first(trip.company, trip.transportCompany, raw.company)),
 
     seats,
 
-    amount:
-      Number.isFinite(numericAmount)
-        ? numericAmount
-        : null,
+    amount: Number.isFinite(numericAmount) ? numericAmount : null,
   };
 }
 
 // عرض الوقت بدون تغيير توقيت السيرفر
 function displayTime(value) {
   return (
-    value.match(
-      /(?:T|\s)(\d{2}:\d{2})/
-    )?.[1] ??
-    value.match(
-      /^(\d{2}:\d{2})/
-    )?.[1] ??
+    value.match(/(?:T|\s)(\d{2}:\d{2})/)?.[1] ??
+    value.match(/^(\d{2}:\d{2})/)?.[1] ??
     "—"
   );
 }
 
 function displayDate(value) {
-  const iso = value.match(
-    /\d{4}-\d{2}-\d{2}/
-  )?.[0];
+  const iso = value.match(/\d{4}-\d{2}-\d{2}/)?.[0];
 
   if (!iso) {
     return "تاريخ غير متوفر";
@@ -287,9 +213,7 @@ function displayDate(value) {
     day: "numeric",
     month: "long",
     year: "numeric",
-  }).format(
-    new Date(`${iso}T12:00:00`)
-  );
+  }).format(new Date(`${iso}T12:00:00`));
 }
 
 function displayPrice(value) {
@@ -297,53 +221,35 @@ function displayPrice(value) {
     return "غير متوفر";
   }
 
-  return (
-    new Intl.NumberFormat("en-US").format(
-      value
-    ) + " ل.س"
-  );
+  return new Intl.NumberFormat("en-US").format(value) + " ل.س";
 }
 
 // تحديد شكل حالة الحجز حسب قيم السيرفر
 function statusInfo(value) {
   const status = value.toUpperCase();
 
-  if (
-    ["CONFIRMED", "BOOKED", "SUCCESS"].includes(
-      status
-    )
-  ) {
+  if (["CONFIRMED", "BOOKED", "SUCCESS"].includes(status)) {
     return {
       label: "تم تأكيد الحجز",
       cls: "bg-[#e7f9f6] text-[#078e87]",
     };
   }
 
-  if (
-    ["PENDING", "WAITING"].includes(status)
-  ) {
+  if (["PENDING", "WAITING"].includes(status)) {
     return {
       label: "بانتظار التأكيد",
       cls: "bg-amber-50 text-amber-700",
     };
   }
 
-  if (
-    ["CANCELLED", "CANCELED"].includes(
-      status
-    )
-  ) {
+  if (["CANCELLED", "CANCELED"].includes(status)) {
     return {
       label: "ملغي",
       cls: "bg-red-50 text-red-700",
     };
   }
 
-  if (
-    ["COMPLETED", "FINISHED"].includes(
-      status
-    )
-  ) {
+  if (["COMPLETED", "FINISHED"].includes(status)) {
     return {
       label: "مكتمل",
       cls: "bg-slate-100 text-slate-700",
@@ -361,12 +267,9 @@ function statusInfo(value) {
 // =====================================
 
 function BookingCard({ booking }) {
-  const [expanded, setExpanded] =
-    useState(false);
+  const [expanded, setExpanded] = useState(false);
 
-  const status = statusInfo(
-    booking.status
-  );
+  const status = statusInfo(booking.status);
 
   return (
     <article className={`${panel} overflow-hidden`}>
@@ -378,14 +281,9 @@ function BookingCard({ booking }) {
           </span>
 
           <div className="flex flex-col gap-1">
-            <span className="text-[10px] text-muted">
-              رقم الحجز
-            </span>
+            <span className="text-[10px] text-muted">رقم الحجز</span>
 
-            <b
-              dir="ltr"
-              className="text-[13px]"
-            >
+            <b dir="ltr" className="text-[13px]">
               {booking.id}
             </b>
           </div>
@@ -403,21 +301,14 @@ function BookingCard({ booking }) {
       <div className="grid items-center gap-[25px] px-[25px] py-[30px] min-[701px]:grid-cols-[1.1fr_1fr] max-[650px]:px-[15px] max-[650px]:py-[21px]">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <small className="text-[10px] text-muted">
-              من
-            </small>
+            <small className="text-[10px] text-muted">من</small>
 
             <h3 className="mt-1 break-words text-[21px] font-black max-[650px]:text-[18px]">
               {booking.origin || "—"}
             </h3>
 
-            <b
-              dir="ltr"
-              className="block text-right text-xs"
-            >
-              {displayTime(
-                booking.departure
-              )}
+            <b dir="ltr" className="block text-right text-xs">
+              {displayTime(booking.departure)}
             </b>
           </div>
 
@@ -432,21 +323,14 @@ function BookingCard({ booking }) {
           </div>
 
           <div className="min-w-0">
-            <small className="text-[10px] text-muted">
-              إلى
-            </small>
+            <small className="text-[10px] text-muted">إلى</small>
 
             <h3 className="mt-1 break-words text-[21px] font-black max-[650px]:text-[18px]">
               {booking.destination || "—"}
             </h3>
 
-            <b
-              dir="ltr"
-              className="block text-right text-xs"
-            >
-              {displayTime(
-                booking.arrival
-              )}
+            <b dir="ltr" className="block text-right text-xs">
+              {displayTime(booking.arrival)}
             </b>
           </div>
         </div>
@@ -455,20 +339,14 @@ function BookingCard({ booking }) {
         <div className="flex flex-col gap-[11px] border-r border-border pr-[26px] dark:border-[#254252] max-[700px]:border-r-0 max-[700px]:border-t max-[700px]:pr-0 max-[700px]:pt-4">
           <span className="flex items-center gap-2 text-[11px] font-bold text-muted">
             <BusFront size={17} />
-            {booking.company ||
-              "شركة النقل غير متوفرة"}
+            {booking.company || "شركة النقل غير متوفرة"}
           </span>
 
           <span className="flex items-center gap-2 text-[11px] font-bold text-muted">
             <Armchair size={17} />
-
             المقاعد:{" "}
             {booking.seats.length
-              ? booking.seats
-                  .map(
-                    (seat) => seat.number
-                  )
-                  .join("، ")
+              ? booking.seats.map((seat) => seat.number).join("، ")
               : "غير متوفرة"}
           </span>
 
@@ -483,18 +361,12 @@ function BookingCard({ booking }) {
       <div className="flex flex-wrap gap-[9px] border-t border-border px-[25px] py-4 dark:border-[#254252] max-[650px]:px-3">
         <button
           type="button"
-          onClick={() =>
-            setExpanded(
-              (current) => !current
-            )
-          }
+          onClick={() => setExpanded((current) => !current)}
           aria-expanded={expanded}
           className="inline-flex min-h-[39px] items-center justify-center gap-2 rounded-lg border border-border px-4 text-[11px] font-black transition hover:border-primary dark:border-[#254252]"
         >
           <Ticket size={17} />
-          {expanded
-            ? "إخفاء التفاصيل"
-            : "عرض التذكرة"}
+          {expanded ? "إخفاء التفاصيل" : "عرض التذكرة"}
         </button>
 
         <span className="inline-flex min-h-[39px] items-center gap-2 rounded-lg bg-[#f2f7f8] px-4 text-[11px] text-muted dark:bg-[#173748]">
@@ -512,49 +384,36 @@ function BookingCard({ booking }) {
 
           {booking.seats.length === 0 ? (
             <p className="text-[11px] text-muted">
-              السيرفر ما رجّع تفاصيل
-              المسافرين ضمن قائمة الحجوزات.
+              السيرفر ما رجّع تفاصيل المسافرين ضمن قائمة الحجوزات.
             </p>
           ) : (
             <div className="space-y-2">
-              {booking.seats.map(
-                (seat, index) => (
-                  <div
-                    key={`${seat.number}-${index}`}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-white p-3 text-[11px] dark:border-[#254252] dark:bg-[#112b3b]"
-                  >
-                    <span className="font-black">
-                      المقعد{" "}
-                      {seat.number || "—"}
-                    </span>
+              {booking.seats.map((seat, index) => (
+                <div
+                  key={`${seat.number}-${index}`}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-white p-3 text-[11px] dark:border-[#254252] dark:bg-[#112b3b]"
+                >
+                  <span className="font-black">
+                    المقعد {seat.number || "—"}
+                  </span>
 
-                    <span className="text-muted">
-                      {seat.name ||
-                        "الاسم غير متوفر"}
-                    </span>
+                  <span className="text-muted">
+                    {seat.name || "الاسم غير متوفر"}
+                  </span>
 
-                    {seat.phone && (
-                      <span
-                        dir="ltr"
-                        className="text-muted"
-                      >
-                        {seat.phone}
-                      </span>
-                    )}
-                  </div>
-                )
-              )}
+                  {seat.phone && (
+                    <span dir="ltr" className="text-muted">
+                      {seat.phone}
+                    </span>
+                  )}
+                </div>
+              ))}
             </div>
           )}
 
           <p className="mt-3 flex items-start gap-2 text-[10px] leading-5 text-muted">
-            <Info
-              size={15}
-              className="mt-0.5 shrink-0"
-            />
-            التفاصيل مأخوذة من حسابك لدى
-            السيرفر؛ لا يتم إنشاء تذكرة
-            تجريبية.
+            <Info size={15} className="mt-0.5 shrink-0" />
+            التفاصيل مأخوذة من حسابك لدى السيرفر؛ لا يتم إنشاء تذكرة تجريبية.
           </p>
         </div>
       )}
@@ -567,98 +426,92 @@ function BookingCard({ booking }) {
 // =====================================
 
 export default function MyBookingsPage() {
-  const [state, setState] = useState(
-    () => {
-      const guest = !readToken();
+  // نظام الدخول الموحد الذي تستخدمه بقية صفحات الموقع.
+  const { accessToken, isAuthenticated } = useAuth();
 
-      return {
-        loading: !guest,
-        guest,
-        error: "",
-        bookings: [],
-      };
-    }
-  );
+  const [state, setState] = useState({
+    token: null,
+    version: -1,
+    error: "",
+    requiresLogin: false,
+    bookings: [],
+  });
+  const [refresh, setRefresh] = useState(0);
 
-  const [refresh, setRefresh] =
-    useState(0);
+  // عند تغيير الحساب أو الضغط على تحديث، لا نعرض بيانات جلسة سابقة.
+  const loading =
+    isAuthenticated &&
+    (state.token !== accessToken || state.version !== refresh);
 
   useEffect(() => {
-    const controller =
-      new AbortController();
+    if (!accessToken) return;
 
-    const token = readToken();
-
-    if (!token) {
-      return;
-    }
+    const controller = new AbortController();
 
     async function load() {
       try {
-        const response = await fetch(
-          `${API_BASE}/bookings/me`,
-          {
-            method: "GET",
-            headers: {
-              Accept: "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            signal: controller.signal,
-          }
-        );
+        const response = await fetch(`${API_BASE}/bookings/me`, {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          signal: controller.signal,
+        });
 
-        if (
-          response.status === 401 ||
-          response.status === 403
-        ) {
-          setState({
-            loading: false,
-            guest: true,
-            error: "",
-            bookings: [],
-          });
+        if (response.status === 401 || response.status === 403) {
+          if (!controller.signal.aborted) {
+            setState({
+              token: accessToken,
+              version: refresh,
+              error:
+                response.status === 401
+                  ? "انتهت صلاحية تسجيل الدخول. سجّل دخولك مجدداً لعرض حجوزاتك."
+                  : "لا تملك صلاحية عرض الحجوزات بهذا الحساب.",
+              requiresLogin: response.status === 401,
+              bookings: [],
+            });
+          }
           return;
         }
 
         if (!response.ok) {
-          throw new Error(
-            `فشل تحميل الحجوزات (HTTP ${response.status}).`
-          );
+          throw new Error(`فشل تحميل الحجوزات (HTTP ${response.status}).`);
         }
 
+        // بعض الـ APIs تعيد 204 بدلاً من قائمة فارغة.
         if (response.status === 204) {
-          setState({
-            loading: false,
-            guest: false,
-            error: "",
-            bookings: [],
-          });
+          if (!controller.signal.aborted) {
+            setState({
+              token: accessToken,
+              version: refresh,
+              error: "",
+              requiresLogin: false,
+              bookings: [],
+            });
+          }
           return;
         }
 
-        const payload =
-          await response.json();
+        const payload = await response.json();
+        const bookings = getList(payload).map(bookingData);
 
-        const bookings = getList(
-          payload
-        ).map(bookingData);
-
-        setState({
-          loading: false,
-          guest: false,
-          error: "",
-          bookings,
-        });
-      } catch (error) {
-        if (
-          error?.name !== "AbortError"
-        ) {
+        if (!controller.signal.aborted) {
           setState({
-            loading: false,
-            guest: false,
-            error:
-              error.message ||
-              "تعذّر تحميل الحجوزات.",
+            token: accessToken,
+            version: refresh,
+            error: "",
+            requiresLogin: false,
+            bookings,
+          });
+        }
+      } catch (error) {
+        if (error?.name !== "AbortError" && !controller.signal.aborted) {
+          setState({
+            token: accessToken,
+            version: refresh,
+            error: error.message || "تعذّر تحميل الحجوزات.",
+            requiresLogin: false,
             bookings: [],
           });
         }
@@ -666,23 +519,11 @@ export default function MyBookingsPage() {
     }
 
     load();
-
     return () => controller.abort();
-  }, [refresh]);
+  }, [accessToken, refresh]);
 
   function retry() {
-    const guest = !readToken();
-
-    setState({
-      loading: !guest,
-      guest,
-      error: "",
-      bookings: [],
-    });
-
-    setRefresh(
-      (count) => count + 1
-    );
+    setRefresh((count) => count + 1);
   }
 
   return (
@@ -697,9 +538,7 @@ export default function MyBookingsPage() {
             aria-label="مسار التنقل"
             className="mb-[24px] flex items-center gap-2 text-[11px] font-extrabold text-muted"
           >
-            <Link to="/">
-              الرئيسية
-            </Link>
+            <Link to="/">الرئيسية</Link>
 
             <ChevronLeft size={14} />
 
@@ -711,135 +550,99 @@ export default function MyBookingsPage() {
           </span>
 
           <h1 className="my-2 text-[34px] font-black max-[650px]:text-[27px]">
-            تذاكرك{" "}
-            <span className="text-primary">
-              دايماً معك.
-            </span>
+            تذاكرك <span className="text-primary">دايماً معك.</span>
           </h1>
 
           <p className="text-[13px] text-muted">
-            راقب حجوزاتك، وارجع لتفاصيل
-            الرحلة وقت ما تحتاج.
+            راقب حجوزاتك، وارجع لتفاصيل الرحلة وقت ما تحتاج.
           </p>
         </div>
       </section>
 
       {/* محتوى الصفحة */}
-      <section
-        className={`${container} pt-[39px]`}
-      >
+      <section className={`${container} pt-[39px]`}>
         <div className="mb-[23px] flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-[19px] font-black">
-              رحلاتي القادمة وحجوزاتي
-            </h2>
+            <h2 className="text-[19px] font-black">رحلاتي القادمة وحجوزاتي</h2>
 
             <p className="text-[11px] text-muted">
-              الحجوزات المرتبطة بحسابك
-              على سيرفر سيرنا
+              الحجوزات المرتبطة بحسابك على سيرفر سيرنا
             </p>
           </div>
 
-          <Link
-            to="/results"
-            className={mainButton}
-          >
+          <Link to="/results" className={mainButton}>
             <Plus size={17} />
             حجز جديد
           </Link>
         </div>
 
         {/* جاري التحميل */}
-        {state.loading ? (
-          <div
-            role="status"
-            className={`${panel} flex items-center justify-center gap-3 p-12 text-xs text-muted`}
-          >
-            <LoaderCircle
-              size={20}
-              className="animate-spin text-primary"
-            />
-            جاري تحميل الحجوزات...
-          </div>
-        ) : state.guest ? (
+        {!isAuthenticated ? (
           /* المستخدم غير مسجل دخول */
-          <div
-            className={`${panel} p-10 text-center`}
-          >
-            <LogIn
-              size={42}
-              className="mx-auto mb-4 text-primary"
-            />
-
-            <h3 className="text-lg font-black">
-              سجّل دخولك لتشوف حجوزاتك
-            </h3>
-
+          <div className={`${panel} p-10 text-center`}>
+            <LogIn size={42} className="mx-auto mb-4 text-primary" />
+            <h3 className="text-lg font-black">سجّل دخولك لتشوف حجوزاتك</h3>
             <p className="mx-auto mt-2 max-w-sm text-xs leading-6 text-muted">
-              رحلاتك محفوظة بحسابك،
-              وبتظهر هون بعد تسجيل الدخول.
+              رحلاتك محفوظة بحسابك، وبتظهر هون بعد تسجيل الدخول.
             </p>
-
             <Link
-              to="/login?redirect=%2Ftrips"
+              to="/login"
+              state={{ from: "/trips" }}
               className={`${mainButton} mt-5`}
             >
               <LogIn size={17} />
               تسجيل الدخول
             </Link>
           </div>
+        ) : loading ? (
+          <div
+            role="status"
+            className={`${panel} flex items-center justify-center gap-3 p-12 text-xs text-muted`}
+          >
+            <LoaderCircle size={20} className="animate-spin text-primary" />
+            جاري تحميل الحجوزات...
+          </div>
         ) : state.error ? (
           /* خطأ بالسيرفر */
-          <div
-            role="alert"
-            className={`${panel} p-8 text-center`}
-          >
-            <Info
-              size={35}
-              className="mx-auto mb-3 text-amber-600"
-            />
+          <div role="alert" className={`${panel} p-8 text-center`}>
+            <Info size={35} className="mx-auto mb-3 text-amber-600" />
 
-            <h3 className="font-black">
-              تعذّر عرض الحجوزات
-            </h3>
+            <h3 className="font-black">تعذّر عرض الحجوزات</h3>
 
-            <p className="mt-2 text-xs text-muted">
-              {state.error}
-            </p>
+            <p className="mt-2 text-xs text-muted">{state.error}</p>
 
-            <button
-              type="button"
-              onClick={retry}
-              className={`${mainButton} mt-5`}
-            >
-              <RefreshCw size={16} />
-              إعادة المحاولة
-            </button>
+            {state.requiresLogin ? (
+              <Link
+                to="/login"
+                state={{ from: "/trips" }}
+                className={`${mainButton} mt-5`}
+              >
+                <LogIn size={16} />
+                تسجيل الدخول مجدداً
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={retry}
+                className={`${mainButton} mt-5`}
+              >
+                <RefreshCw size={16} />
+                إعادة المحاولة
+              </button>
+            )}
           </div>
         ) : state.bookings.length === 0 ? (
           /* لا توجد حجوزات */
-          <div
-            className={`${panel} p-10 text-center`}
-          >
-            <Ticket
-              size={42}
-              className="mx-auto mb-4 text-primary"
-            />
+          <div className={`${panel} p-10 text-center`}>
+            <Ticket size={42} className="mx-auto mb-4 text-primary" />
 
-            <h3 className="text-lg font-black">
-              لسا ما عندك حجوزات
-            </h3>
+            <h3 className="text-lg font-black">لسا ما عندك حجوزات</h3>
 
             <p className="mx-auto mt-2 max-w-sm text-xs leading-6 text-muted">
-              لما تحجز رحلة من حسابك،
-              رح تظهر هون بعد تأكيدها
-              من السيرفر.
+              لما تحجز رحلة من حسابك، رح تظهر هون بعد تأكيدها من السيرفر.
             </p>
 
-            <Link
-              to="/results"
-              className={`${mainButton} mt-5`}
-            >
+            <Link to="/results" className={`${mainButton} mt-5`}>
               <Plus size={17} />
               دور على رحلة
             </Link>
@@ -847,14 +650,9 @@ export default function MyBookingsPage() {
         ) : (
           /* عرض حجوزات المستخدم */
           <div className="space-y-4">
-            {state.bookings.map(
-              (booking) => (
-                <BookingCard
-                  key={booking.key}
-                  booking={booking}
-                />
-              )
-            )}
+            {state.bookings.map((booking) => (
+              <BookingCard key={booking.key} booking={booking} />
+            ))}
 
             <button
               type="button"
