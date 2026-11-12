@@ -1,5 +1,5 @@
-
 import { useEffect, useState } from "react";
+import { useAuth } from "../Context/AuthContext.jsx";
 
 import {
   Link,
@@ -26,22 +26,12 @@ import {
   Wallet,
 } from "lucide-react";
 
-import {
-  formatArabicDate,
-  formatPrice,
-} from "../data/resultsData";
+import { formatArabicDate, formatPrice } from "../data/resultsData";
 
-import {
-  loadSeats,
-  loadTrip,
-} from "../services/sairnaApi";
+import { loadSeats, loadTrip } from "../services/sairnaApi";
 
 // Website API الخاص بالمسافرين
-const API_BASE =
-  "https://sairna.abdulrahman-hares.com/api/v1/website";
-
-// لازم يكون نفس المفتاح المستخدم بصفحة Login
-const TOKEN_KEY = "sairna_passenger_access_token";
+const API_BASE = "https://sairna.abdulrahman-hares.com/api/v1/website";
 
 const container =
   "mx-auto w-[calc(100%-34px)] max-w-[1216px] min-[651px]:w-[calc(100%-48px)] min-[1151px]:w-[calc(100%-68px)]";
@@ -49,11 +39,7 @@ const container =
 const card =
   "rounded-[20px] border border-border bg-white shadow-[0_15px_55px_rgba(19,54,72,.065)] dark:border-[#254252] dark:bg-[#112b3b]";
 
-const stages = [
-  "اختيار المقاعد",
-  "بيانات المسافرين",
-  "المراجعة والتأكيد",
-];
+const stages = ["اختيار المقاعد", "بيانات المسافرين", "المراجعة والتأكيد"];
 
 // ========================================
 // إنشاء الحجز الحقيقي
@@ -61,9 +47,7 @@ const stages = [
 
 async function submitBooking(tripId, seats, token) {
   if (!token) {
-    const error = new Error(
-      "يجب تسجيل الدخول أولاً."
-    );
+    const error = new Error("يجب تسجيل الدخول أولاً.");
     error.status = 401;
     throw error;
   }
@@ -74,44 +58,25 @@ async function submitBooking(tripId, seats, token) {
     throw new Error("معرّف الرحلة غير صالح.");
   }
 
-  if (
-    !Array.isArray(seats) ||
-    seats.length < 1 ||
-    seats.length > 4
-  ) {
-    throw new Error(
-      "يمكن حجز من مقعد واحد إلى أربعة مقاعد."
-    );
+  if (!Array.isArray(seats) || seats.length < 1 || seats.length > 4) {
+    throw new Error("يمكن حجز من مقعد واحد إلى أربعة مقاعد.");
   }
 
   const normalizedSeats = seats.map((seat) => {
     const seatNumber = Number(seat.seatNumber);
-    const passengerName = String(
-      seat.passengerName ?? ""
-    ).trim();
-    const passengerPhone = String(
-      seat.passengerPhone ?? ""
-    ).trim();
+    const passengerName = String(seat.passengerName ?? "").trim();
+    const passengerPhone = String(seat.passengerPhone ?? "").trim();
 
-    if (
-      !Number.isInteger(seatNumber) ||
-      seatNumber < 1
-    ) {
+    if (!Number.isInteger(seatNumber) || seatNumber < 1) {
       throw new Error("رقم المقعد غير صالح.");
     }
 
     if (passengerName.length < 3) {
-      throw new Error(
-        "أدخل الاسم الكامل لكل مسافر."
-      );
+      throw new Error("أدخل الاسم الكامل لكل مسافر.");
     }
 
-    if (
-      passengerPhone.replace(/\D/g, "").length < 9
-    ) {
-      throw new Error(
-        "أدخل رقم موبايل صحيح لكل مسافر."
-      );
+    if (passengerPhone.replace(/\D/g, "").length < 9) {
+      throw new Error("أدخل رقم موبايل صحيح لكل مسافر.");
     }
 
     return {
@@ -121,16 +86,10 @@ async function submitBooking(tripId, seats, token) {
     };
   });
 
-  const seatNumbers = normalizedSeats.map(
-    (seat) => seat.seatNumber
-  );
+  const seatNumbers = normalizedSeats.map((seat) => seat.seatNumber);
 
-  if (
-    new Set(seatNumbers).size !== seatNumbers.length
-  ) {
-    throw new Error(
-      "لا يمكن حجز المقعد نفسه مرتين."
-    );
+  if (new Set(seatNumbers).size !== seatNumbers.length) {
+    throw new Error("لا يمكن حجز المقعد نفسه مرتين.");
   }
 
   let response;
@@ -151,7 +110,7 @@ async function submitBooking(tripId, seats, token) {
   } catch (error) {
     throw new Error(
       "تعذّر الاتصال بالسيرفر. تحقق من اتصالك وحالة الحجز قبل إعادة المحاولة.",
-      { cause: error }
+      { cause: error },
     );
   }
 
@@ -178,14 +137,11 @@ async function submitBooking(tripId, seats, token) {
     }
 
     if (response.status === 401) {
-      message =
-        "جلسة تسجيل الدخول غير صالحة. سجّل دخولك مجدداً.";
+      message = "جلسة تسجيل الدخول غير صالحة. سجّل دخولك مجدداً.";
     } else if (response.status === 403) {
-      message =
-        "هذا الحساب غير مخوّل بإنشاء الحجز.";
+      message = "هذا الحساب غير مخوّل بإنشاء الحجز.";
     } else if (response.status === 409) {
-      message =
-        "بعض المقاعد لم تعد متاحة. اختر مقاعد ثانية.";
+      message = "بعض المقاعد لم تعد متاحة. اختر مقاعد ثانية.";
     }
 
     const error = new Error(String(message));
@@ -205,22 +161,15 @@ function BookingSteps({ current }) {
   return (
     <div className="my-[30px] flex flex-wrap items-center justify-center gap-2 sm:gap-4">
       {stages.map((label, index) => (
-        <div
-          key={label}
-          className="flex items-center gap-2 sm:gap-4"
-        >
+        <div key={label} className="flex items-center gap-2 sm:gap-4">
           {index > 0 && (
             <span className="h-px w-4 bg-border sm:w-[65px] dark:bg-[#254252]" />
           )}
 
           <span
-            aria-current={
-              current === index ? "step" : undefined
-            }
+            aria-current={current === index ? "step" : undefined}
             className={`flex items-center gap-2 text-[10px] font-black sm:text-[11px] ${
-              current >= index
-                ? "text-primary"
-                : "text-muted"
+              current >= index ? "text-primary" : "text-muted"
             }`}
           >
             <span
@@ -230,11 +179,7 @@ function BookingSteps({ current }) {
                   : "border-border bg-[#f2f7f8] dark:border-[#254252] dark:bg-[#173748]"
               }`}
             >
-              {index < current ? (
-                <Check size={16} />
-              ) : (
-                index + 1
-              )}
+              {index < current ? <Check size={16} /> : index + 1}
             </span>
 
             {label}
@@ -249,15 +194,9 @@ function BookingSteps({ current }) {
 // ملخص الحجز
 // ========================================
 
-function BookingSummary({
-  trip,
-  people,
-  selected,
-}) {
+function BookingSummary({ trip, people, selected }) {
   return (
-    <aside
-      className={`${card} h-fit p-[20px] lg:sticky lg:top-24`}
-    >
+    <aside className={`${card} h-fit p-[20px] lg:sticky lg:top-24`}>
       <h2 className="flex items-center gap-2 border-b border-border pb-4 text-[15px] font-black dark:border-[#254252]">
         <Ticket size={18} className="text-primary" />
         ملخص الحجز
@@ -269,48 +208,27 @@ function BookingSummary({
         </span>
 
         <div>
-          <strong className="text-[12px]">
-            {trip.company.name}
-          </strong>
+          <strong className="text-[12px]">{trip.company.name}</strong>
 
-          <p className="text-[10px] text-muted">
-            رحلة باتجاه واحد
-          </p>
+          <p className="text-[10px] text-muted">رحلة باتجاه واحد</p>
         </div>
       </div>
 
       <div className="flex items-center justify-between rounded-xl bg-[#f2f7f8] p-3 dark:bg-[#173748]">
         <div>
-          <small className="text-[10px] text-muted">
-            الانطلاق
-          </small>
-          <b className="block text-sm">
-            {trip.origin.name}
-          </b>
-          <span
-            dir="ltr"
-            className="text-[10px] text-muted"
-          >
+          <small className="text-[10px] text-muted">الانطلاق</small>
+          <b className="block text-sm">{trip.origin.name}</b>
+          <span dir="ltr" className="text-[10px] text-muted">
             {trip.departure}
           </span>
         </div>
 
-        <ArrowLeft
-          size={19}
-          className="text-primary"
-        />
+        <ArrowLeft size={19} className="text-primary" />
 
         <div>
-          <small className="text-[10px] text-muted">
-            الوصول
-          </small>
-          <b className="block text-sm">
-            {trip.destination.name}
-          </b>
-          <span
-            dir="ltr"
-            className="text-[10px] text-muted"
-          >
+          <small className="text-[10px] text-muted">الوصول</small>
+          <b className="block text-sm">{trip.destination.name}</b>
+          <span dir="ltr" className="text-[10px] text-muted">
             {trip.arrival || "—"}
           </span>
         </div>
@@ -318,56 +236,28 @@ function BookingSummary({
 
       <dl className="my-5 space-y-3.5 text-[11px]">
         {[
-          [
-            "تاريخ الرحلة",
-            formatArabicDate(trip.date),
-          ],
+          ["تاريخ الرحلة", formatArabicDate(trip.date)],
           ["المسافرون", people],
-          [
-            "المقاعد",
-            selected.length
-              ? selected.join("، ")
-              : "لم تُحدَّد بعد",
-          ],
-          [
-            "السعر للشخص",
-            formatPrice(trip.price),
-          ],
+          ["المقاعد", selected.length ? selected.join("، ") : "لم تُحدَّد بعد"],
+          ["السعر للشخص", formatPrice(trip.price)],
         ].map(([label, value]) => (
-          <div
-            key={label}
-            className="flex items-center justify-between gap-3"
-          >
-            <dt className="text-muted">
-              {label}
-            </dt>
-            <dd className="font-bold">
-              {value}
-            </dd>
+          <div key={label} className="flex items-center justify-between gap-3">
+            <dt className="text-muted">{label}</dt>
+            <dd className="font-bold">{value}</dd>
           </div>
         ))}
       </dl>
 
       <div className="flex items-center justify-between gap-3 border-t border-dashed border-border pt-4 dark:border-[#254252]">
-        <b className="text-xs">
-          السعر الإجمالي
-        </b>
+        <b className="text-xs">السعر الإجمالي</b>
         <strong className="text-[17px] font-black text-primary">
-          {formatPrice(
-            trip.price == null
-              ? null
-              : trip.price * people
-          )}
+          {formatPrice(trip.price == null ? null : trip.price * people)}
         </strong>
       </div>
 
       <p className="mt-4 flex gap-2 rounded-lg bg-[#f2f7f8] p-3 text-[10px] leading-5 text-muted dark:bg-[#173748]">
-        <ShieldCheck
-          size={17}
-          className="shrink-0 text-primary"
-        />
-        يتم تثبيت الحجز فقط بعد موافقة
-        السيرفر على الطلب.
+        <ShieldCheck size={17} className="shrink-0 text-primary" />
+        يتم تثبيت الحجز فقط بعد موافقة السيرفر على الطلب.
       </p>
     </aside>
   );
@@ -377,16 +267,9 @@ function BookingSummary({
 // اختيار المقاعد
 // ========================================
 
-function SeatMap({
-  seats,
-  selected,
-  people,
-  onToggle,
-}) {
-  const rows = Array.from(
-    { length: Math.ceil(seats.length / 4) },
-    (_, index) =>
-      seats.slice(index * 4, index * 4 + 4)
+function SeatMap({ seats, selected, people, onToggle }) {
+  const rows = Array.from({ length: Math.ceil(seats.length / 4) }, (_, index) =>
+    seats.slice(index * 4, index * 4 + 4),
   );
 
   return (
@@ -394,10 +277,7 @@ function SeatMap({
       <div className="mx-auto w-full max-w-[353px] rounded-[100px_100px_26px_26px] border border-border bg-[#f2f7f8] px-4 pb-6 pt-5 dark:border-[#254252] dark:bg-[#173748]">
         <div className="mb-4 flex items-center justify-between border-b border-dashed border-[#bdced2] pb-4 text-[10px] font-black text-muted">
           <span className="flex items-center gap-2">
-            <BusFront
-              size={18}
-              className="text-primary"
-            />
+            <BusFront size={18} className="text-primary" />
             مقدمة الحافلة
           </span>
         </div>
@@ -409,15 +289,11 @@ function SeatMap({
               className="grid grid-cols-[20px_1fr_1fr_12px_1fr_1fr] items-center gap-1.5 sm:grid-cols-[27px_1fr_1fr_15px_1fr_1fr]"
             >
               <span className="text-center text-[10px] text-muted">
-                {String(rowIndex + 1).padStart(
-                  2,
-                  "0"
-                )}
+                {String(rowIndex + 1).padStart(2, "0")}
               </span>
 
               {row.map((seat, index) => {
-                const chosen =
-                  selected.includes(seat.number);
+                const chosen = selected.includes(seat.number);
 
                 return (
                   <button
@@ -426,9 +302,7 @@ function SeatMap({
                     disabled={!seat.available}
                     aria-pressed={chosen}
                     aria-label={`المقعد ${seat.number}`}
-                    onClick={() =>
-                      onToggle(seat.number)
-                    }
+                    onClick={() => onToggle(seat.number)}
                     style={{
                       gridColumn: [2, 3, 5, 6][index],
                     }}
@@ -454,9 +328,7 @@ function SeatMap({
 
         <div className="mt-5 flex flex-wrap justify-center gap-3 border-t border-border pt-3 text-[10px] text-muted">
           <span>□ متاح</span>
-          <span className="text-primary">
-            ■ مختار
-          </span>
+          <span className="text-primary">■ مختار</span>
           <span>▣ محجوز</span>
         </div>
       </div>
@@ -466,13 +338,10 @@ function SeatMap({
           <Armchair size={24} />
         </span>
 
-        <h3 className="font-black">
-          مكانك، راحتك.
-        </h3>
+        <h3 className="font-black">مكانك، راحتك.</h3>
 
         <p className="mt-2 text-xs leading-6 text-muted">
-          اختار مقعدك حسب تفضيلك،
-          جنب الشباك أو الممر.
+          اختار مقعدك حسب تفضيلك، جنب الشباك أو الممر.
         </p>
 
         <div className="mt-5 flex justify-between border-t border-border pt-3 text-xs">
@@ -489,8 +358,7 @@ function SeatMap({
         </p>
 
         <p className="mt-4 rounded-xl bg-[#e6f8f3] p-3 text-[11px] text-[#078e87]">
-          لازم تختار عدد مقاعد مساوي لعدد
-          المسافرين حتى تكمل.
+          لازم تختار عدد مقاعد مساوي لعدد المسافرين حتى تكمل.
         </p>
       </div>
     </div>
@@ -501,11 +369,7 @@ function SeatMap({
 // بيانات المسافرين
 // ========================================
 
-function PassengersForm({
-  passengers,
-  selected,
-  onUpdate,
-}) {
+function PassengersForm({ passengers, selected, onUpdate }) {
   return (
     <div className="space-y-4">
       {passengers.map((person, index) => (
@@ -518,30 +382,22 @@ function PassengersForm({
               <span className="grid h-8 w-8 place-items-center rounded-full bg-[#e6f8f3] text-primary">
                 {index + 1}
               </span>
-
               المسافر {index + 1}
             </h3>
 
-            <span className="text-xs text-primary">
-              مقعد {selected[index]}
-            </span>
+            <span className="text-xs text-primary">مقعد {selected[index]}</span>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="text-xs font-bold">
               الاسم الكامل
-
               <input
                 type="text"
                 value={person.name}
                 maxLength={90}
                 autoComplete="name"
                 onChange={(event) =>
-                  onUpdate(
-                    index,
-                    "name",
-                    event.target.value
-                  )
+                  onUpdate(index, "name", event.target.value)
                 }
                 className="mt-2 block h-[49px] w-full rounded-xl border border-border bg-transparent px-3 text-xs outline-primary dark:border-[#254252]"
                 placeholder="مثال: أحمد خالد"
@@ -550,7 +406,6 @@ function PassengersForm({
 
             <label className="text-xs font-bold">
               رقم الموبايل
-
               <input
                 type="tel"
                 dir="ltr"
@@ -558,11 +413,7 @@ function PassengersForm({
                 value={person.phone}
                 maxLength={22}
                 onChange={(event) =>
-                  onUpdate(
-                    index,
-                    "phone",
-                    event.target.value
-                  )
+                  onUpdate(index, "phone", event.target.value)
                 }
                 className="mt-2 block h-[49px] w-full rounded-xl border border-border bg-transparent px-3 text-xs outline-primary dark:border-[#254252]"
                 placeholder="09xxxxxxxx"
@@ -579,35 +430,26 @@ function PassengersForm({
 // المراجعة وطريقة الحجز
 // ========================================
 
-function BookingReview({
-  passengers,
-  selected,
-  payment,
-  onPaymentChange,
-}) {
+function BookingReview({ passengers, selected, payment, onPaymentChange }) {
   const paymentOptions = [
     {
       value: "office",
       Icon: Wallet,
       title: "الدفع في مكتب الشركة",
-      description:
-        "ادفع عند الحضور لمكتب الشركة قبل الرحلة.",
+      description: "ادفع عند الحضور لمكتب الشركة قبل الرحلة.",
     },
     {
       value: "demo",
       Icon: CreditCard,
       title: "دفع إلكتروني (تجريبي)",
-      description:
-        "هذا الخيار للعرض فقط، ولا توجد بوابة دفع إلكتروني حالياً.",
+      description: "هذا الخيار للعرض فقط، ولا توجد بوابة دفع إلكتروني حالياً.",
     },
   ];
 
   return (
     <div>
       <div className="mb-[18px] rounded-[17px] border border-border p-[22px] dark:border-[#254252]">
-        <h3 className="mb-[14px] text-sm font-black">
-          تفاصيل المسافرين
-        </h3>
+        <h3 className="mb-[14px] text-sm font-black">تفاصيل المسافرين</h3>
 
         {passengers.map((person, index) => (
           <div
@@ -619,14 +461,9 @@ function BookingReview({
             </span>
 
             <div className="flex min-w-0 flex-col">
-              <b className="break-words text-[12px]">
-                {person.name}
-              </b>
+              <b className="break-words text-[12px]">{person.name}</b>
 
-              <span
-                dir="ltr"
-                className="text-left text-[11px] text-muted"
-              >
+              <span dir="ltr" className="text-left text-[11px] text-muted">
                 {person.phone}
               </span>
             </div>
@@ -639,68 +476,49 @@ function BookingReview({
       </div>
 
       <fieldset className="mb-[18px] rounded-[17px] border border-border p-[22px] dark:border-[#254252]">
-        <legend className="sr-only">
-          طريقة تأكيد الحجز
-        </legend>
+        <legend className="sr-only">طريقة تأكيد الحجز</legend>
 
-        <h3 className="mb-[14px] text-sm font-black">
-          طريقة تأكيد الحجز
-        </h3>
+        <h3 className="mb-[14px] text-sm font-black">طريقة تأكيد الحجز</h3>
 
         <div className="space-y-[9px]">
-          {paymentOptions.map(
-            ({
-              value,
-              Icon,
-              title,
-              description,
-            }) => (
-              <label
-                key={value}
-                className={`flex cursor-pointer items-center gap-3 rounded-xl border p-[13px] transition ${
-                  payment === value
-                    ? "border-primary bg-[#e6f8f3] dark:bg-[#174b49]"
-                    : "border-border bg-white dark:border-[#254252] dark:bg-[#112b3b]"
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="payment-method"
-                  value={value}
-                  checked={payment === value}
-                  onChange={() =>
-                    onPaymentChange(value)
-                  }
-                  className="shrink-0 accent-primary"
-                />
+          {paymentOptions.map(({ value, Icon, title, description }) => (
+            <label
+              key={value}
+              className={`flex cursor-pointer items-center gap-3 rounded-xl border p-[13px] transition ${
+                payment === value
+                  ? "border-primary bg-[#e6f8f3] dark:bg-[#174b49]"
+                  : "border-border bg-white dark:border-[#254252] dark:bg-[#112b3b]"
+              }`}
+            >
+              <input
+                type="radio"
+                name="payment-method"
+                value={value}
+                checked={payment === value}
+                onChange={() => onPaymentChange(value)}
+                className="shrink-0 accent-primary"
+              />
 
-                <span className="grid h-[43px] w-[43px] shrink-0 place-items-center rounded-[11px] bg-[#f2f7f8] text-primary">
-                  <Icon size={22} />
-                </span>
+              <span className="grid h-[43px] w-[43px] shrink-0 place-items-center rounded-[11px] bg-[#f2f7f8] text-primary">
+                <Icon size={22} />
+              </span>
 
-                <span className="flex min-w-0 flex-col">
-                  <b className="text-[12px]">
-                    {title}
-                  </b>
+              <span className="flex min-w-0 flex-col">
+                <b className="text-[12px]">{title}</b>
 
-                  <small className="text-[10px] leading-5 text-muted">
-                    {description}
-                  </small>
-                </span>
-              </label>
-            )
-          )}
+                <small className="text-[10px] leading-5 text-muted">
+                  {description}
+                </small>
+              </span>
+            </label>
+          ))}
         </div>
       </fieldset>
 
       <p className="flex items-start gap-2 text-[11px] leading-6 text-[#078e87]">
-        <ShieldCheck
-          size={18}
-          className="mt-0.5 shrink-0"
-        />
-        الحجز يُؤكَّد فقط بعد قبول
-        السيرفر للطلب. خيار الدفع الإلكتروني
-        تجريبي وغير مرتبط بتحصيل أموال.
+        <ShieldCheck size={18} className="mt-0.5 shrink-0" />
+        الحجز يُؤكَّد فقط بعد قبول السيرفر للطلب. خيار الدفع الإلكتروني تجريبي
+        وغير مرتبط بتحصيل أموال.
       </p>
     </div>
   );
@@ -711,6 +529,7 @@ function BookingReview({
 // ========================================
 
 export default function BookingPage() {
+  const { accessToken, signOut } = useAuth();
   const { tripId } = useParams();
 
   const location = useLocation();
@@ -718,9 +537,7 @@ export default function BookingPage() {
 
   const [params] = useSearchParams();
 
-  const requestedPeople = Number(
-    params.get("people")
-  );
+  const requestedPeople = Number(params.get("people"));
 
   const people =
     Number.isInteger(requestedPeople) &&
@@ -731,13 +548,11 @@ export default function BookingPage() {
 
   // استرجاع المسودة بعد تسجيل الدخول
   const draft =
-    location.state?.bookingDraft?.tripId ===
-    tripId
+    location.state?.bookingDraft?.tripId === tripId
       ? location.state.bookingDraft
       : null;
 
-  const returnTo =
-    location.state?.returnTo || "/results";
+  const returnTo = location.state?.returnTo || "/results";
 
   const [request, setRequest] = useState({
     trip: location.state?.trip || null,
@@ -746,40 +561,24 @@ export default function BookingPage() {
     error: "",
   });
 
-  const [selected, setSelected] = useState(
-    () =>
-      Array.isArray(draft?.selected)
-        ? draft.selected.slice(0, people)
-        : []
+  const [selected, setSelected] = useState(() =>
+    Array.isArray(draft?.selected) ? draft.selected.slice(0, people) : [],
   );
 
-  const [passengers, setPassengers] = useState(
-    () =>
-      Array.from(
-        { length: people },
-        (_, index) => ({
-          name:
-            draft?.passengers?.[index]?.name ||
-            "",
-          phone:
-            draft?.passengers?.[index]?.phone ||
-            "",
-        })
-      )
+  const [passengers, setPassengers] = useState(() =>
+    Array.from({ length: people }, (_, index) => ({
+      name: draft?.passengers?.[index]?.name || "",
+      phone: draft?.passengers?.[index]?.phone || "",
+    })),
   );
 
-  const [step, setStep] = useState(
-    draft ? 2 : 0
-  );
+  const [step, setStep] = useState(draft ? 2 : 0);
 
-  const [payment, setPayment] = useState(
-    draft?.payment || "office"
-  );
+  const [payment, setPayment] = useState(draft?.payment || "office");
 
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
-  const [bookingConfirmed, setBookingConfirmed] =
-    useState(false);
+  const [bookingConfirmed, setBookingConfirmed] = useState(false);
 
   // تحميل الرحلة والمقاعد الحقيقية
   useEffect(() => {
@@ -787,18 +586,9 @@ export default function BookingPage() {
 
     const tripRequest = location.state?.trip
       ? Promise.resolve(location.state.trip)
-      : loadTrip(
-          tripId,
-          controller.signal
-        );
+      : loadTrip(tripId, controller.signal);
 
-    Promise.all([
-      tripRequest,
-      loadSeats(
-        tripId,
-        controller.signal
-      ),
-    ])
+    Promise.all([tripRequest, loadSeats(tripId, controller.signal)])
       .then(([trip, seats]) => {
         setRequest({
           trip,
@@ -826,12 +616,10 @@ export default function BookingPage() {
 
     setSelected((current) =>
       current.includes(number)
-        ? current.filter(
-            (item) => item !== number
-          )
+        ? current.filter((item) => item !== number)
         : current.length >= people
           ? current
-          : [...current, number]
+          : [...current, number],
     );
   }
 
@@ -844,8 +632,8 @@ export default function BookingPage() {
               ...person,
               [key]: value,
             }
-          : person
-      )
+          : person,
+      ),
     );
 
     setMessage("");
@@ -861,27 +649,21 @@ export default function BookingPage() {
     }));
 
     const available = new Set(
-      fresh
-        .filter((seat) => seat.available)
-        .map((seat) => seat.number)
+      fresh.filter((seat) => seat.available).map((seat) => seat.number),
     );
 
     const unavailableSelected = selected.some(
-      (number) => !available.has(number)
+      (number) => !available.has(number),
     );
 
     if (unavailableSelected) {
       setSelected((current) =>
-        current.filter((number) =>
-          available.has(number)
-        )
+        current.filter((number) => available.has(number)),
       );
 
       setStep(0);
 
-      throw new Error(
-        "بعض المقاعد صارت محجوزة. اختار مقاعد متاحة من جديد."
-      );
+      throw new Error("بعض المقاعد صارت محجوزة. اختار مقاعد متاحة من جديد.");
     }
   }
 
@@ -891,9 +673,7 @@ export default function BookingPage() {
 
     if (step === 0) {
       if (selected.length !== people) {
-        setMessage(
-          `اختار ${people} مقعد قبل المتابعة.`
-        );
+        setMessage(`اختار ${people} مقعد قبل المتابعة.`);
         return;
       }
 
@@ -916,15 +696,10 @@ export default function BookingPage() {
         passengers.some(
           (person) =>
             person.name.trim().length < 3 ||
-            person.phone.replace(
-              /\D/g,
-              ""
-            ).length < 9
+            person.phone.replace(/\D/g, "").length < 9,
         )
       ) {
-        setMessage(
-          "أدخل الاسم الكامل ورقم هاتف صحيح لكل مسافر."
-        );
+        setMessage("أدخل الاسم الكامل ورقم هاتف صحيح لكل مسافر.");
         return;
       }
 
@@ -932,28 +707,23 @@ export default function BookingPage() {
     }
   }
 
-  // الذهاب إلى Login مع الاحتفاظ ببيانات الحجز
+  // الذهاب إلى تسجيل الدخول مع الاحتفاظ بمكان المستخدم ومسودة الحجز
   function goToLogin() {
-    const redirect =
-      `${location.pathname}${location.search}`;
+    const from = `${location.pathname}${location.search}${location.hash}`;
 
-    navigate(
-      `/login?redirect=${encodeURIComponent(
-        redirect
-      )}`,
-      {
-        state: {
-          trip: request.trip,
-          returnTo,
-          bookingDraft: {
-            tripId,
-            selected,
-            passengers,
-            payment,
-          },
+    navigate("/login", {
+      state: {
+        from,
+        trip: request.trip,
+        returnTo,
+        bookingDraft: {
+          tripId,
+          selected,
+          passengers,
+          payment,
         },
-      }
-    );
+      },
+    });
   }
 
   // ========================================
@@ -971,21 +741,13 @@ export default function BookingPage() {
     // لا يوجد دفع إلكتروني حقيقي
     if (payment === "demo") {
       setMessage(
-        "الدفع الإلكتروني حالياً تجريبي. اختار الدفع في مكتب الشركة لإكمال الحجز."
+        "الدفع الإلكتروني حالياً تجريبي. اختار الدفع في مكتب الشركة لإكمال الحجز.",
       );
       return;
     }
 
-    // قراءة جلسة المسافر
-    
-const token = (() => {
-  try {
-    return sessionStorage.getItem(TOKEN_KEY);
-  } catch {
-    return null;
-  }
-})();
-
+    // القراءة من نظام الدخول المشترك بدل مفتاح التخزين القديم
+    const token = accessToken;
 
     // المستخدم غير مسجل دخول
     if (!token) {
@@ -996,9 +758,7 @@ const token = (() => {
     // تحقق نهائي من عدد المقاعد
     if (selected.length !== people) {
       setStep(0);
-      setMessage(
-        "عدد المقاعد المختارة لا يطابق عدد المسافرين."
-      );
+      setMessage("عدد المقاعد المختارة لا يطابق عدد المسافرين.");
       return;
     }
 
@@ -1007,13 +767,11 @@ const token = (() => {
       passengers.some(
         (person) =>
           person.name.trim().length < 3 ||
-          person.phone.replace(/\D/g, "").length < 9
+          person.phone.replace(/\D/g, "").length < 9,
       )
     ) {
       setStep(1);
-      setMessage(
-        "راجع الاسم الكامل ورقم الموبايل لكل مسافر."
-      );
+      setMessage("راجع الاسم الكامل ورقم الموبايل لكل مسافر.");
       return;
     }
 
@@ -1024,22 +782,14 @@ const token = (() => {
       await verifySeats();
 
       // تحويل البيانات إلى صيغة Swagger
-      const bookingSeats = selected.map(
-        (seatNumber, index) => ({
-          seatNumber: Number(seatNumber),
-          passengerName:
-            passengers[index].name.trim(),
-          passengerPhone:
-            passengers[index].phone.trim(),
-        })
-      );
+      const bookingSeats = selected.map((seatNumber, index) => ({
+        seatNumber: Number(seatNumber),
+        passengerName: passengers[index].name.trim(),
+        passengerPhone: passengers[index].phone.trim(),
+      }));
 
       // تنفيذ POST /bookings الحقيقي
-      await submitBooking(
-        tripId,
-        bookingSeats,
-        token
-      );
+      await submitBooking(tripId, bookingSeats, token);
 
       // ما منوصل هون إلا إذا السيرفر قبل الطلب
       setBookingConfirmed(true);
@@ -1047,12 +797,7 @@ const token = (() => {
     } catch (error) {
       // جلسة منتهية أو غير صالحة
       if (error.status === 401) {
-        try {
-          sessionStorage.removeItem(TOKEN_KEY);
-        } catch {
-          // التخزين غير متاح
-        }
-
+        signOut();
         goToLogin();
         return;
       }
@@ -1074,10 +819,7 @@ const token = (() => {
         }
       }
 
-      setMessage(
-        error.message ||
-          "حدث خطأ أثناء تأكيد الحجز."
-      );
+      setMessage(error.message || "حدث خطأ أثناء تأكيد الحجز.");
     } finally {
       setBusy(false);
     }
@@ -1098,9 +840,7 @@ const token = (() => {
           >
             <Link to="/">الرئيسية</Link>
             <ChevronLeft size={13} />
-            <Link to={returnTo}>
-              الرحلات
-            </Link>
+            <Link to={returnTo}>الرحلات</Link>
             <ChevronLeft size={13} />
             <span>إتمام الحجز</span>
           </nav>
@@ -1112,10 +852,7 @@ const token = (() => {
               </span>
 
               <h1 className="mt-2 text-[29px] font-black">
-                كمّل حجز{" "}
-                <span className="text-primary">
-                  رحلتك.
-                </span>
+                كمّل حجز <span className="text-primary">رحلتك.</span>
               </h1>
             </div>
 
@@ -1132,10 +869,7 @@ const token = (() => {
         <BookingSteps current={step} />
 
         {request.loading ? (
-          <div
-            role="status"
-            className={`${card} p-8 text-center`}
-          >
+          <div role="status" className={`${card} p-8 text-center`}>
             جاري تحميل الرحلة والمقاعد...
           </div>
         ) : request.error ? (
@@ -1147,31 +881,17 @@ const token = (() => {
           </div>
         ) : trip ? (
           <div className="grid items-start gap-[21px] lg:grid-cols-[minmax(0,1fr)_320px]">
-            <section
-              className={`${card} min-w-0 p-[17px] sm:p-[29px]`}
-            >
+            <section className={`${card} min-w-0 p-[17px] sm:p-[29px]`}>
               <div className="mb-[21px]">
                 <h2 className="flex items-center gap-[11px] text-[20px] font-black">
                   {bookingConfirmed ? (
-                    <CheckCircle2
-                      size={24}
-                      className="text-primary"
-                    />
+                    <CheckCircle2 size={24} className="text-primary" />
                   ) : step === 0 ? (
-                    <Armchair
-                      size={24}
-                      className="text-primary"
-                    />
+                    <Armchair size={24} className="text-primary" />
                   ) : step === 1 ? (
-                    <Users
-                      size={24}
-                      className="text-primary"
-                    />
+                    <Users size={24} className="text-primary" />
                   ) : (
-                    <CheckCircle2
-                      size={24}
-                      className="text-primary"
-                    />
+                    <CheckCircle2 size={24} className="text-primary" />
                   )}
 
                   {bookingConfirmed
@@ -1204,14 +924,11 @@ const token = (() => {
                     className="mx-auto mb-3 text-emerald-600"
                   />
 
-                  <h3 className="text-lg font-black">
-                    حجزك صار جاهز!
-                  </h3>
+                  <h3 className="text-lg font-black">حجزك صار جاهز!</h3>
 
                   <p className="mx-auto mt-2 max-w-[360px] text-xs leading-6">
-                    تم إنشاء الحجز بنجاح.
-                    احتفظ بتفاصيل الرحلة،
-                    وراجع حجوزاتك من حسابك.
+                    تم إنشاء الحجز بنجاح. احتفظ بتفاصيل الرحلة، وراجع حجوزاتك من
+                    حسابك.
                   </p>
 
                   <Link
@@ -1286,16 +1003,11 @@ const token = (() => {
                     <button
                       type="button"
                       disabled={busy}
-                      onClick={
-                        step === 2 ? confirm : next
-                      }
+                      onClick={step === 2 ? confirm : next}
                       className="inline-flex min-h-[43px] items-center gap-2 rounded-xl bg-primary px-5 py-3 text-[11px] font-black text-white disabled:opacity-60"
                     >
                       {busy ? (
-                        <LoaderCircle
-                          size={16}
-                          className="animate-spin"
-                        />
+                        <LoaderCircle size={16} className="animate-spin" />
                       ) : (
                         <ArrowLeft size={16} />
                       )}
@@ -1311,16 +1023,10 @@ const token = (() => {
               )}
             </section>
 
-            <BookingSummary
-              trip={trip}
-              people={people}
-              selected={selected}
-            />
+            <BookingSummary trip={trip} people={people} selected={selected} />
           </div>
         ) : (
-          <div className={`${card} p-6`}>
-            الرحلة غير موجودة.
-          </div>
+          <div className={`${card} p-6`}>الرحلة غير موجودة.</div>
         )}
       </div>
     </main>
