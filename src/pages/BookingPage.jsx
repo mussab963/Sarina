@@ -17,7 +17,6 @@ import {
   Check,
   CheckCircle2,
   ChevronLeft,
-  CircleHelp,
   CreditCard,
   LoaderCircle,
   ShieldCheck,
@@ -37,10 +36,11 @@ import {
   loadTrip,
 } from "../services/sairnaApi";
 
+// Website API الخاص بالمسافرين
 const API_BASE =
   "https://sairna.abdulrahman-hares.com/api/v1/website";
 
-// لازم مصعب يستخدم نفس المفتاح عند تسجيل الدخول
+// لازم يكون نفس المفتاح المستخدم بصفحة Login
 const TOKEN_KEY = "sairna_passenger_access_token";
 
 const container =
@@ -55,7 +55,152 @@ const stages = [
   "المراجعة والتأكيد",
 ];
 
-// مؤشر مراحل الحجز
+// ========================================
+// إنشاء الحجز الحقيقي
+// ========================================
+
+async function submitBooking(tripId, seats, token) {
+  if (!token) {
+    const error = new Error(
+      "يجب تسجيل الدخول أولاً."
+    );
+    error.status = 401;
+    throw error;
+  }
+
+  const id = Number(tripId);
+
+  if (!Number.isInteger(id) || id < 1) {
+    throw new Error("معرّف الرحلة غير صالح.");
+  }
+
+  if (
+    !Array.isArray(seats) ||
+    seats.length < 1 ||
+    seats.length > 4
+  ) {
+    throw new Error(
+      "يمكن حجز من مقعد واحد إلى أربعة مقاعد."
+    );
+  }
+
+  const normalizedSeats = seats.map((seat) => {
+    const seatNumber = Number(seat.seatNumber);
+    const passengerName = String(
+      seat.passengerName ?? ""
+    ).trim();
+    const passengerPhone = String(
+      seat.passengerPhone ?? ""
+    ).trim();
+
+    if (
+      !Number.isInteger(seatNumber) ||
+      seatNumber < 1
+    ) {
+      throw new Error("رقم المقعد غير صالح.");
+    }
+
+    if (passengerName.length < 3) {
+      throw new Error(
+        "أدخل الاسم الكامل لكل مسافر."
+      );
+    }
+
+    if (
+      passengerPhone.replace(/\D/g, "").length < 9
+    ) {
+      throw new Error(
+        "أدخل رقم موبايل صحيح لكل مسافر."
+      );
+    }
+
+    return {
+      seatNumber,
+      passengerName,
+      passengerPhone,
+    };
+  });
+
+  const seatNumbers = normalizedSeats.map(
+    (seat) => seat.seatNumber
+  );
+
+  if (
+    new Set(seatNumbers).size !== seatNumbers.length
+  ) {
+    throw new Error(
+      "لا يمكن حجز المقعد نفسه مرتين."
+    );
+  }
+
+  let response;
+
+  try {
+    response = await fetch(`${API_BASE}/bookings`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        tripId: id,
+        seats: normalizedSeats,
+      }),
+    });
+  } catch (error) {
+    throw new Error(
+      "تعذّر الاتصال بالسيرفر. تحقق من اتصالك وحالة الحجز قبل إعادة المحاولة.",
+      { cause: error }
+    );
+  }
+
+  const responseText = await response.text();
+
+  let result = null;
+
+  if (responseText) {
+    try {
+      result = JSON.parse(responseText);
+    } catch {
+      result = null;
+    }
+  }
+
+  if (!response.ok) {
+    let message =
+      result?.message ??
+      result?.error?.message ??
+      `فشل إنشاء الحجز (HTTP ${response.status}).`;
+
+    if (Array.isArray(message)) {
+      message = message.join("، ");
+    }
+
+    if (response.status === 401) {
+      message =
+        "جلسة تسجيل الدخول غير صالحة. سجّل دخولك مجدداً.";
+    } else if (response.status === 403) {
+      message =
+        "هذا الحساب غير مخوّل بإنشاء الحجز.";
+    } else if (response.status === 409) {
+      message =
+        "بعض المقاعد لم تعد متاحة. اختر مقاعد ثانية.";
+    }
+
+    const error = new Error(String(message));
+    error.status = response.status;
+    throw error;
+  }
+
+  // استجابة النجاح الموثقة في Swagger هي 201
+  return result;
+}
+
+// ========================================
+// شريط مراحل الحجز
+// ========================================
+
 function BookingSteps({ current }) {
   return (
     <div className="my-[30px] flex flex-wrap items-center justify-center gap-2 sm:gap-4">
@@ -100,7 +245,10 @@ function BookingSteps({ current }) {
   );
 }
 
+// ========================================
 // ملخص الحجز
+// ========================================
+
 function BookingSummary({
   trip,
   people,
@@ -111,10 +259,7 @@ function BookingSummary({
       className={`${card} h-fit p-[20px] lg:sticky lg:top-24`}
     >
       <h2 className="flex items-center gap-2 border-b border-border pb-4 text-[15px] font-black dark:border-[#254252]">
-        <Ticket
-          size={18}
-          className="text-primary"
-        />
+        <Ticket size={18} className="text-primary" />
         ملخص الحجز
       </h2>
 
@@ -139,14 +284,12 @@ function BookingSummary({
           <small className="text-[10px] text-muted">
             الانطلاق
           </small>
-
           <b className="block text-sm">
             {trip.origin.name}
           </b>
-
           <span
-            className="text-[10px] text-muted"
             dir="ltr"
+            className="text-[10px] text-muted"
           >
             {trip.departure}
           </span>
@@ -161,14 +304,12 @@ function BookingSummary({
           <small className="text-[10px] text-muted">
             الوصول
           </small>
-
           <b className="block text-sm">
             {trip.destination.name}
           </b>
-
           <span
-            className="text-[10px] text-muted"
             dir="ltr"
+            className="text-[10px] text-muted"
           >
             {trip.arrival || "—"}
           </span>
@@ -211,7 +352,6 @@ function BookingSummary({
         <b className="text-xs">
           السعر الإجمالي
         </b>
-
         <strong className="text-[17px] font-black text-primary">
           {formatPrice(
             trip.price == null
@@ -226,14 +366,17 @@ function BookingSummary({
           size={17}
           className="shrink-0 text-primary"
         />
-        لا يُنشأ حجز حقيقي قبل نجاح
-        طلب التأكيد لدى السيرفر.
+        يتم تثبيت الحجز فقط بعد موافقة
+        السيرفر على الطلب.
       </p>
     </aside>
   );
 }
 
-// مخطط المقاعد
+// ========================================
+// اختيار المقاعد
+// ========================================
+
 function SeatMap({
   seats,
   selected,
@@ -257,8 +400,6 @@ function SeatMap({
             />
             مقدمة الحافلة
           </span>
-
-          <CircleHelp size={18} />
         </div>
 
         <div className="space-y-2">
@@ -284,13 +425,7 @@ function SeatMap({
                     type="button"
                     disabled={!seat.available}
                     aria-pressed={chosen}
-                    aria-label={`المقعد ${seat.number}، ${
-                      !seat.available
-                        ? "محجوز"
-                        : chosen
-                          ? "مختار"
-                          : "متاح"
-                    }`}
+                    aria-label={`المقعد ${seat.number}`}
                     onClick={() =>
                       onToggle(seat.number)
                     }
@@ -342,7 +477,6 @@ function SeatMap({
 
         <div className="mt-5 flex justify-between border-t border-border pt-3 text-xs">
           <span>المقاعد المختارة</span>
-
           <b className="text-primary">
             {selected.length} / {people}
           </b>
@@ -363,7 +497,10 @@ function SeatMap({
   );
 }
 
+// ========================================
 // بيانات المسافرين
+// ========================================
+
 function PassengersForm({
   passengers,
   selected,
@@ -399,11 +536,11 @@ function PassengersForm({
                 value={person.name}
                 maxLength={90}
                 autoComplete="name"
-                onChange={(e) =>
+                onChange={(event) =>
                   onUpdate(
                     index,
                     "name",
-                    e.target.value
+                    event.target.value
                   )
                 }
                 className="mt-2 block h-[49px] w-full rounded-xl border border-border bg-transparent px-3 text-xs outline-primary dark:border-[#254252]"
@@ -420,11 +557,11 @@ function PassengersForm({
                 inputMode="tel"
                 value={person.phone}
                 maxLength={22}
-                onChange={(e) =>
+                onChange={(event) =>
                   onUpdate(
                     index,
                     "phone",
-                    e.target.value
+                    event.target.value
                   )
                 }
                 className="mt-2 block h-[49px] w-full rounded-xl border border-border bg-transparent px-3 text-xs outline-primary dark:border-[#254252]"
@@ -438,7 +575,10 @@ function PassengersForm({
   );
 }
 
-// مرحلة المراجعة - حسب تصميم الأستاذ
+// ========================================
+// المراجعة وطريقة الحجز
+// ========================================
+
 function BookingReview({
   passengers,
   selected,
@@ -451,20 +591,19 @@ function BookingReview({
       Icon: Wallet,
       title: "الدفع في مكتب الشركة",
       description:
-        "ادفع عند الحضور لمكتب الشركة قبل الرحلة — الخيار معروض وفق تصميم الأستاذ.",
+        "ادفع عند الحضور لمكتب الشركة قبل الرحلة.",
     },
     {
       value: "demo",
       Icon: CreditCard,
       title: "دفع إلكتروني (تجريبي)",
       description:
-        "محاكاة لشكل خيار الدفع فقط؛ لن يتم تحصيل أي مبلغ.",
+        "هذا الخيار للعرض فقط، ولا توجد بوابة دفع إلكتروني حالياً.",
     },
   ];
 
   return (
     <div>
-      {/* تفاصيل المسافرين */}
       <div className="mb-[18px] rounded-[17px] border border-border p-[22px] dark:border-[#254252]">
         <h3 className="mb-[14px] text-sm font-black">
           تفاصيل المسافرين
@@ -475,7 +614,7 @@ function BookingReview({
             key={index}
             className="flex items-center gap-3 border-t border-border py-3 dark:border-[#254252]"
           >
-            <span className="grid h-[39px] w-[39px] shrink-0 place-items-center rounded-full bg-[#e6f8f3] text-primary dark:bg-[#174b49]">
+            <span className="grid h-[39px] w-[39px] shrink-0 place-items-center rounded-full bg-[#e6f8f3] text-primary">
               <UserRound size={19} />
             </span>
 
@@ -499,7 +638,6 @@ function BookingReview({
         ))}
       </div>
 
-      {/* طريقة تأكيد الحجز */}
       <fieldset className="mb-[18px] rounded-[17px] border border-border p-[22px] dark:border-[#254252]">
         <legend className="sr-only">
           طريقة تأكيد الحجز
@@ -536,7 +674,7 @@ function BookingReview({
                   className="shrink-0 accent-primary"
                 />
 
-                <span className="grid h-[43px] w-[43px] shrink-0 place-items-center rounded-[11px] bg-[#f2f7f8] text-primary dark:bg-[#193a49]">
+                <span className="grid h-[43px] w-[43px] shrink-0 place-items-center rounded-[11px] bg-[#f2f7f8] text-primary">
                   <Icon size={22} />
                 </span>
 
@@ -560,15 +698,18 @@ function BookingReview({
           size={18}
           className="mt-0.5 shrink-0"
         />
-        الحجز الحقيقي يتم فقط بعد تأكيد
-        السيرفر. خيار الدفع الإلكتروني
-        حالياً توضيحي وليس بوابة دفع.
+        الحجز يُؤكَّد فقط بعد قبول
+        السيرفر للطلب. خيار الدفع الإلكتروني
+        تجريبي وغير مرتبط بتحصيل أموال.
       </p>
     </div>
   );
 }
 
+// ========================================
 // الصفحة الرئيسية للحجز
+// ========================================
+
 export default function BookingPage() {
   const { tripId } = useParams();
 
@@ -637,15 +778,15 @@ export default function BookingPage() {
 
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [bookingConfirmed, setBookingConfirmed] =
+    useState(false);
 
   // تحميل الرحلة والمقاعد الحقيقية
   useEffect(() => {
     const controller = new AbortController();
 
     const tripRequest = location.state?.trip
-      ? Promise.resolve(
-          location.state.trip
-        )
+      ? Promise.resolve(location.state.trip)
       : loadTrip(
           tripId,
           controller.signal
@@ -710,7 +851,7 @@ export default function BookingPage() {
     setMessage("");
   }
 
-  // التحقق من المقاعد قبل المتابعة
+  // التأكد من أن المقاعد ما زالت متاحة
   async function verifySeats() {
     const fresh = await loadSeats(tripId);
 
@@ -719,20 +860,20 @@ export default function BookingPage() {
       seats: fresh,
     }));
 
-    const valid = new Set(
+    const available = new Set(
       fresh
         .filter((seat) => seat.available)
         .map((seat) => seat.number)
     );
 
-    if (
-      selected.some(
-        (number) => !valid.has(number)
-      )
-    ) {
+    const unavailableSelected = selected.some(
+      (number) => !available.has(number)
+    );
+
+    if (unavailableSelected) {
       setSelected((current) =>
         current.filter((number) =>
-          valid.has(number)
+          available.has(number)
         )
       );
 
@@ -744,7 +885,7 @@ export default function BookingPage() {
     }
   }
 
-  // التنقل بين المراحل
+  // الانتقال بين المراحل
   async function next() {
     setMessage("");
 
@@ -791,7 +932,7 @@ export default function BookingPage() {
     }
   }
 
-  // الانتقال لتسجيل الدخول مع حفظ بيانات الحجز
+  // الذهاب إلى Login مع الاحتفاظ ببيانات الحجز
   function goToLogin() {
     const redirect =
       `${location.pathname}${location.search}`;
@@ -815,47 +956,97 @@ export default function BookingPage() {
     );
   }
 
-  // تأكيد وجود جلسة مسافر حقيقية
+  // ========================================
+  // تأكيد الحجز الحقيقي
+  // ========================================
+
   async function confirm() {
+    // منع إرسال الحجز مرتين من نفس الشاشة
+    if (busy || bookingConfirmed) {
+      return;
+    }
+
     setMessage("");
 
-    let token;
+    // لا يوجد دفع إلكتروني حقيقي
+    if (payment === "demo") {
+      setMessage(
+        "الدفع الإلكتروني حالياً تجريبي. اختار الدفع في مكتب الشركة لإكمال الحجز."
+      );
+      return;
+    }
+
+    // قراءة جلسة المسافر
+    let token = null;
 
     try {
-      token =
-        sessionStorage.getItem(TOKEN_KEY);
+      token = sessionStorage.getItem(TOKEN_KEY);
     } catch {
       token = null;
     }
 
-    // لا يوجد تسجيل دخول
+    // المستخدم غير مسجل دخول
     if (!token) {
       goToLogin();
+      return;
+    }
+
+    // تحقق نهائي من عدد المقاعد
+    if (selected.length !== people) {
+      setStep(0);
+      setMessage(
+        "عدد المقاعد المختارة لا يطابق عدد المسافرين."
+      );
+      return;
+    }
+
+    // تحقق نهائي من بيانات المسافرين
+    if (
+      passengers.some(
+        (person) =>
+          person.name.trim().length < 3 ||
+          person.phone.replace(/\D/g, "").length < 9
+      )
+    ) {
+      setStep(1);
+      setMessage(
+        "راجع الاسم الكامل ورقم الموبايل لكل مسافر."
+      );
       return;
     }
 
     setBusy(true);
 
     try {
-      const response = await fetch(
-        `${API_BASE}/auth/me`,
-        {
-          headers: {
-            Accept: "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
+      // تحديث حالة المقاعد قبل الإرسال
+      await verifySeats();
+
+      // تحويل البيانات إلى صيغة Swagger
+      const bookingSeats = selected.map(
+        (seatNumber, index) => ({
+          seatNumber: Number(seatNumber),
+          passengerName:
+            passengers[index].name.trim(),
+          passengerPhone:
+            passengers[index].phone.trim(),
+        })
       );
 
-      // انتهاء الجلسة أو توكن غير صالح
-      if (
-        response.status === 401 ||
-        response.status === 403
-      ) {
+      // تنفيذ POST /bookings الحقيقي
+      await submitBooking(
+        tripId,
+        bookingSeats,
+        token
+      );
+
+      // ما منوصل هون إلا إذا السيرفر قبل الطلب
+      setBookingConfirmed(true);
+      setMessage("");
+    } catch (error) {
+      // جلسة منتهية أو غير صالحة
+      if (error.status === 401) {
         try {
-          sessionStorage.removeItem(
-            TOKEN_KEY
-          );
+          sessionStorage.removeItem(TOKEN_KEY);
         } catch {
           // التخزين غير متاح
         }
@@ -864,23 +1055,26 @@ export default function BookingPage() {
         return;
       }
 
-      if (!response.ok) {
-        throw new Error(
-          `فشل التحقق من الجلسة (HTTP ${response.status}).`
-        );
+      if (error.status === 409) {
+        // نعيد عرض المقاعد حتى يختار المستخدم
+        try {
+          const fresh = await loadSeats(tripId);
+
+          setRequest((current) => ({
+            ...current,
+            seats: fresh,
+          }));
+
+          setSelected([]);
+          setStep(0);
+        } catch {
+          // ستظهر رسالة تعارض الحجز للمستخدم
+        }
       }
 
-      // نتأكد أن المقاعد لسا متاحة
-      await verifySeats();
-
-      // ما منرسل POST قبل معرفة صيغة الطلب الرسمية
-      setMessage(
-        "تم التحقق من تسجيل الدخول والمقاعد. إنشاء الحجز النهائي يحتاج ربط POST /bookings وفق صيغة طلب الأستاذ، ولم يتم إرسال أي حجز بعد."
-      );
-    } catch (error) {
       setMessage(
         error.message ||
-          "تعذّر التحقق من تسجيل الدخول."
+          "حدث خطأ أثناء تأكيد الحجز."
       );
     } finally {
       setBusy(false);
@@ -956,7 +1150,12 @@ export default function BookingPage() {
             >
               <div className="mb-[21px]">
                 <h2 className="flex items-center gap-[11px] text-[20px] font-black">
-                  {step === 0 ? (
+                  {bookingConfirmed ? (
+                    <CheckCircle2
+                      size={24}
+                      className="text-primary"
+                    />
+                  ) : step === 0 ? (
                     <Armchair
                       size={24}
                       className="text-primary"
@@ -973,104 +1172,141 @@ export default function BookingPage() {
                     />
                   )}
 
-                  {step === 0
-                    ? "اختار مكانك المفضّل"
-                    : step === 1
-                      ? "مين مسافر معنا؟"
-                      : "كل شي جاهز؟"}
+                  {bookingConfirmed
+                    ? "تم تأكيد حجزك!"
+                    : step === 0
+                      ? "اختار مكانك المفضّل"
+                      : step === 1
+                        ? "مين مسافر معنا؟"
+                        : "كل شي جاهز؟"}
                 </h2>
 
                 <p className="mt-1 text-xs text-muted">
-                  {step === 0
-                    ? "اختار عدد المقاعد المطلوب من المقاعد المتاحة."
-                    : step === 1
-                      ? "دخل بيانات المسافرين حسب عدد المقاعد المختارة."
-                      : "راجع معلومات الرحلة قبل ما تثبّت الحجز."}
+                  {bookingConfirmed
+                    ? "تم إنشاء الحجز بنجاح لدى السيرفر."
+                    : step === 0
+                      ? "اختار عدد المقاعد المطلوب من المقاعد المتاحة."
+                      : step === 1
+                        ? "دخل بيانات المسافرين حسب عدد المقاعد المختارة."
+                        : "راجع معلومات الرحلة قبل ما تثبّت الحجز."}
                 </p>
               </div>
 
-              {step === 0 && (
-                <SeatMap
-                  seats={request.seats}
-                  selected={selected}
-                  people={people}
-                  onToggle={toggleSeat}
-                />
-              )}
-
-              {step === 1 && (
-                <PassengersForm
-                  passengers={passengers}
-                  selected={selected}
-                  onUpdate={updatePassenger}
-                />
-              )}
-
-              {step === 2 && (
-                <BookingReview
-                  passengers={passengers}
-                  selected={selected}
-                  payment={payment}
-                  onPaymentChange={setPayment}
-                />
-              )}
-
-              {message && (
-                <p
-                  role="alert"
-                  className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[11px] leading-6 text-amber-900"
+              {bookingConfirmed ? (
+                <div
+                  role="status"
+                  className="rounded-[17px] border border-emerald-200 bg-emerald-50 p-7 text-center text-emerald-800"
                 >
-                  {message}
-                </p>
-              )}
+                  <CheckCircle2
+                    size={48}
+                    className="mx-auto mb-3 text-emerald-600"
+                  />
 
-              <div className="mt-[27px] flex flex-wrap items-center justify-between gap-4 border-t border-border pt-5 dark:border-[#254252]">
-                {step === 0 ? (
+                  <h3 className="text-lg font-black">
+                    حجزك صار جاهز!
+                  </h3>
+
+                  <p className="mx-auto mt-2 max-w-[360px] text-xs leading-6">
+                    تم إنشاء الحجز بنجاح.
+                    احتفظ بتفاصيل الرحلة،
+                    وراجع حجوزاتك من حسابك.
+                  </p>
+
                   <Link
-                    to={returnTo}
-                    className="flex items-center gap-2 text-[11px] font-bold text-muted"
+                    to="/"
+                    className="mt-5 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-xs font-black text-white"
                   >
                     <ArrowRight size={16} />
-                    رجوع للرحلات
+                    العودة للرئيسية
                   </Link>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStep((s) => s - 1);
-                      setMessage("");
-                    }}
-                    className="flex items-center gap-2 text-[11px] font-bold text-muted"
-                  >
-                    <ArrowRight size={16} />
-                    السابق
-                  </button>
-                )}
-
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={
-                    step === 2 ? confirm : next
-                  }
-                  className="inline-flex min-h-[43px] items-center gap-2 rounded-xl bg-primary px-5 py-3 text-[11px] font-black text-white disabled:opacity-60"
-                >
-                  {busy ? (
-                    <LoaderCircle
-                      size={16}
-                      className="animate-spin"
+                </div>
+              ) : (
+                <>
+                  {step === 0 && (
+                    <SeatMap
+                      seats={request.seats}
+                      selected={selected}
+                      people={people}
+                      onToggle={toggleSeat}
                     />
-                  ) : (
-                    <ArrowLeft size={16} />
                   )}
 
-                  {busy
-                    ? "جارٍ التحقق..."
-                    : step === 2
-                      ? "تأكيد الحجز"
-                      : "متابعة الحجز"}
-                </button>
-              </div>
+                  {step === 1 && (
+                    <PassengersForm
+                      passengers={passengers}
+                      selected={selected}
+                      onUpdate={updatePassenger}
+                    />
+                  )}
+
+                  {step === 2 && (
+                    <BookingReview
+                      passengers={passengers}
+                      selected={selected}
+                      payment={payment}
+                      onPaymentChange={setPayment}
+                    />
+                  )}
+
+                  {message && (
+                    <p
+                      role="alert"
+                      className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[11px] leading-6 text-amber-900"
+                    >
+                      {message}
+                    </p>
+                  )}
+
+                  <div className="mt-[27px] flex flex-wrap items-center justify-between gap-4 border-t border-border pt-5 dark:border-[#254252]">
+                    {step === 0 ? (
+                      <Link
+                        to={returnTo}
+                        className="flex items-center gap-2 text-[11px] font-bold text-muted"
+                      >
+                        <ArrowRight size={16} />
+                        رجوع للرحلات
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => {
+                          setStep((current) => current - 1);
+                          setMessage("");
+                        }}
+                        className="flex items-center gap-2 text-[11px] font-bold text-muted disabled:opacity-50"
+                      >
+                        <ArrowRight size={16} />
+                        السابق
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={
+                        step === 2 ? confirm : next
+                      }
+                      className="inline-flex min-h-[43px] items-center gap-2 rounded-xl bg-primary px-5 py-3 text-[11px] font-black text-white disabled:opacity-60"
+                    >
+                      {busy ? (
+                        <LoaderCircle
+                          size={16}
+                          className="animate-spin"
+                        />
+                      ) : (
+                        <ArrowLeft size={16} />
+                      )}
+
+                      {busy
+                        ? "جارٍ التحقق..."
+                        : step === 2
+                          ? "تأكيد الحجز"
+                          : "متابعة الحجز"}
+                    </button>
+                  </div>
+                </>
+              )}
             </section>
 
             <BookingSummary
