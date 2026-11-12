@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
-
+import { useAuth } from "../Context/AuthContext";
 import {
   Armchair,
   BusFront,
@@ -18,24 +18,6 @@ import {
 
 // Website API - خاص بالمسافرين
 const API_BASE = "https://sairna.abdulrahman-hares.com/api/v1/website";
-
-function readToken() {
-  try {
-    const saved =
-      sessionStorage.getItem("sairna-auth") ||
-      localStorage.getItem("sairna-auth");
-
-    if (!saved) return "";
-
-    const session = JSON.parse(saved);
-
-    return session && typeof session.accessToken === "string"
-      ? session.accessToken
-      : "";
-  } catch {
-    return "";
-  }
-}
 
 const container =
   "mx-auto w-[calc(100%-34px)] max-w-[1216px] min-[651px]:w-[calc(100%-48px)] min-[1151px]:w-[calc(100%-68px)]";
@@ -443,8 +425,9 @@ function BookingCard({ booking }) {
 // =====================================
 
 export default function MyBookingsPage() {
+  const { accessToken, signOut } = useAuth();
   const [state, setState] = useState(() => {
-    const guest = !readToken();
+    const guest = !accessToken;
 
     return {
       loading: !guest,
@@ -458,11 +441,10 @@ export default function MyBookingsPage() {
 
   useEffect(() => {
     const controller = new AbortController();
-
-    const token = readToken();
+    const token = accessToken;
 
     if (!token) {
-      return;
+      return () => controller.abort();
     }
 
     async function load() {
@@ -521,14 +503,12 @@ export default function MyBookingsPage() {
         }
       }
     }
-
     load();
-
     return () => controller.abort();
-  }, [refresh]);
+  }, [accessToken, refresh, signOut]);
 
   function retry() {
-    const guest = !readToken();
+    const guest = !accessToken;
 
     setState({
       loading: !guest,
@@ -591,7 +571,7 @@ export default function MyBookingsPage() {
         </div>
 
         {/* جاري التحميل */}
-        {state.loading ? (
+        {accessToken && state.loading ? (
           <div
             role="status"
             className={`${panel} flex items-center justify-center gap-3 p-12 text-xs text-muted`}
@@ -599,8 +579,7 @@ export default function MyBookingsPage() {
             <LoaderCircle size={20} className="animate-spin text-primary" />
             جاري تحميل الحجوزات...
           </div>
-        ) : state.guest ? (
-          /* المستخدم غير مسجل دخول */
+        ) : !accessToken /* المستخدم غير مسجل دخول */ ? (
           <div className={`${panel} p-10 text-center`}>
             <LogIn size={42} className="mx-auto mb-4 text-primary" />
 
@@ -611,7 +590,8 @@ export default function MyBookingsPage() {
             </p>
 
             <Link
-              to="/login?redirect=%2Ftrips"
+              to="/login"
+              state={{ from: "/trips" }}
               className={`${mainButton} mt-5`}
             >
               <LogIn size={17} />
