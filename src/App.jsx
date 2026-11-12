@@ -11,6 +11,9 @@ import BookingPage from "./pages/BookingPage";
 import CompaniesPage from "./pages/CompaniesPage";
 import MyBookingsPage from "./pages/MyBookingsPage";
 
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+
 function ComingSoon() {
   return (
     <section className="flex min-h-[60vh] items-center justify-center px-4 text-center">
@@ -30,18 +33,17 @@ function ComingSoon() {
 function App() {
   return (
     <Routes>
+      {/* صفحات تسجيل الدخول والتسجيل */}
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+
+      {/* صفحات الموقع الرئيسية */}
       <Route element={<MainLayout />}>
         {/* الصفحة الرئيسية */}
-        <Route
-          index
-          element={<HomePage />}
-        />
+        <Route index element={<HomePage />} />
 
         {/* نتائج البحث */}
-        <Route
-          path="results"
-          element={<ResultsPage />}
-        />
+        <Route path="results" element={<ResultsPage />} />
 
         {/* إتمام الحجز */}
         <Route
@@ -50,22 +52,13 @@ function App() {
         />
 
         {/* شركات النقل */}
-        <Route
-          path="companies"
-          element={<CompaniesPage />}
-        />
+        <Route path="companies" element={<CompaniesPage />} />
 
         {/* حجوزاتي */}
-        <Route
-          path="trips"
-          element={<MyBookingsPage />}
-        />
+        <Route path="trips" element={<MyBookingsPage />} />
 
         {/* الصفحات غير المنفذة */}
-        <Route
-          path="*"
-          element={<ComingSoon />}
-        />
+        <Route path="*" element={<ComingSoon />} />
       </Route>
     </Routes>
   );
