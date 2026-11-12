@@ -9,6 +9,7 @@ import HomePage from "./pages/HomePage";
 import ResultsPage from "./pages/ResultsPage";
 import BookingPage from "./pages/BookingPage";
 import CompaniesPage from "./pages/CompaniesPage";
+import MyBookingsPage from "./pages/MyBookingsPage";
 
 function ComingSoon() {
   return (
@@ -30,7 +31,6 @@ function App() {
   return (
     <Routes>
       <Route element={<MainLayout />}>
-
         {/* الصفحة الرئيسية */}
         <Route
           index
@@ -55,12 +55,17 @@ function App() {
           element={<CompaniesPage />}
         />
 
+        {/* حجوزاتي */}
+        <Route
+          path="trips"
+          element={<MyBookingsPage />}
+        />
+
         {/* الصفحات غير المنفذة */}
         <Route
           path="*"
           element={<ComingSoon />}
         />
-
       </Route>
     </Routes>
   );

@@ -659,3 +659,166 @@ export async function loadCompanies(signal) {
     };
   });
 }
+
+/**
+ * إنشاء حجز حقيقي عبر Website API.
+ *
+ * يتطلب Access Token خاص بالمسافر.
+ * يدعم من 1 إلى 4 مقاعد.
+ */
+export async function createBooking(
+  { tripId, seats },
+  token,
+  signal
+) {
+  const numericTripId = Number(tripId);
+
+  if (
+    !Number.isInteger(numericTripId) ||
+    numericTripId < 1
+  ) {
+    throw new Error("معرّف الرحلة غير صالح.");
+  }
+
+  if (
+    !Array.isArray(seats) ||
+    seats.length < 1 ||
+    seats.length > 4
+  ) {
+    throw new Error(
+      "لازم تختار من مقعد واحد لأربعة مقاعد."
+    );
+  }
+
+  if (!token || typeof token !== "string") {
+    const error = new Error(
+      "يجب تسجيل الدخول قبل تأكيد الحجز."
+    );
+    error.status = 401;
+    throw error;
+  }
+
+  const normalizedSeats = seats.map((seat) => {
+    const seatNumber = Number(seat.seatNumber);
+    const passengerName = String(
+      seat.passengerName ?? ""
+    ).trim();
+    const passengerPhone = String(
+      seat.passengerPhone ?? ""
+    ).trim();
+
+    if (
+      !Number.isInteger(seatNumber) ||
+      seatNumber < 1
+    ) {
+      throw new Error("رقم المقعد غير صالح.");
+    }
+
+    if (passengerName.length < 3) {
+      throw new Error(
+        "الاسم الكامل للمسافر غير صالح."
+      );
+    }
+
+    const phoneDigits = passengerPhone.replace(
+      /\D/g,
+      ""
+    );
+
+    if (phoneDigits.length < 9) {
+      throw new Error(
+        "رقم هاتف المسافر غير صالح."
+      );
+    }
+
+    return {
+      seatNumber,
+      passengerName,
+      passengerPhone,
+    };
+  });
+
+  const seatNumbers = normalizedSeats.map(
+    (seat) => seat.seatNumber
+  );
+
+  if (
+    new Set(seatNumbers).size !==
+    seatNumbers.length
+  ) {
+    throw new Error(
+      "لا يمكن حجز المقعد نفسه مرتين."
+    );
+  }
+
+  let response;
+
+  try {
+    response = await fetch(`${API_BASE}/bookings`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        tripId: numericTripId,
+        seats: normalizedSeats,
+      }),
+      signal,
+    });
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw error;
+    }
+
+    throw new Error(
+      "تعذّر الاتصال بالسيرفر أثناء إنشاء الحجز.",
+      { cause: error }
+    );
+  }
+
+  // قد تكون استجابة النجاح JSON أو فارغة.
+  const responseText = await response.text();
+
+  let result = null;
+
+  if (responseText) {
+    try {
+      result = JSON.parse(responseText);
+    } catch {
+      result = null;
+    }
+  }
+
+  if (!response.ok) {
+    let message =
+      result?.message ||
+      result?.error?.message ||
+      `فشل إنشاء الحجز (HTTP ${response.status}).`;
+
+    if (Array.isArray(message)) {
+      message = message.join("، ");
+    }
+
+    if (response.status === 401) {
+      message =
+        "انتهت جلسة تسجيل الدخول. سجّل دخولك مجدداً.";
+    } else if (response.status === 403) {
+      message =
+        "هذا الحساب غير مخوّل بإنشاء حجز.";
+    } else if (response.status === 409) {
+      message =
+        "في تعارض بالحجز. ممكن تكون بعض المقاعد انحجزت، جرّب اختيار مقاعد ثانية.";
+    }
+
+    const error = new Error(String(message));
+    error.status = response.status;
+
+    throw error;
+  }
+
+  // النجاح يعتمد على استجابة السيرفر الفعلية.
+  // رمز النجاح الموثق في Swagger هو 201.
+  return result;
+}
