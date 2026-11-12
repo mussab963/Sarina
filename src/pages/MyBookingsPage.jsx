@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
-import { useAuth } from "../Context/AuthContext.jsx";
 
 import {
   Armchair,
@@ -19,6 +18,24 @@ import {
 
 // Website API - خاص بالمسافرين
 const API_BASE = "https://sairna.abdulrahman-hares.com/api/v1/website";
+
+function readToken() {
+  try {
+    const saved =
+      sessionStorage.getItem("sairna-auth") ||
+      localStorage.getItem("sairna-auth");
+
+    if (!saved) return "";
+
+    const session = JSON.parse(saved);
+
+    return session && typeof session.accessToken === "string"
+      ? session.accessToken
+      : "";
+  } catch {
+    return "";
+  }
+}
 
 const container =
   "mx-auto w-[calc(100%-34px)] max-w-[1216px] min-[651px]:w-[calc(100%-48px)] min-[1151px]:w-[calc(100%-68px)]";
@@ -426,27 +443,27 @@ function BookingCard({ booking }) {
 // =====================================
 
 export default function MyBookingsPage() {
-  // نظام الدخول الموحد الذي تستخدمه بقية صفحات الموقع.
-  const { accessToken, isAuthenticated } = useAuth();
+  const [state, setState] = useState(() => {
+    const guest = !readToken();
 
-  const [state, setState] = useState({
-    token: null,
-    version: -1,
-    error: "",
-    requiresLogin: false,
-    bookings: [],
+    return {
+      loading: !guest,
+      guest,
+      error: "",
+      bookings: [],
+    };
   });
+
   const [refresh, setRefresh] = useState(0);
 
-  // عند تغيير الحساب أو الضغط على تحديث، لا نعرض بيانات جلسة سابقة.
-  const loading =
-    isAuthenticated &&
-    (state.token !== accessToken || state.version !== refresh);
-
   useEffect(() => {
-    if (!accessToken) return;
-
     const controller = new AbortController();
+
+    const token = readToken();
+
+    if (!token) {
+      return;
+    }
 
     async function load() {
       try {
@@ -454,24 +471,18 @@ export default function MyBookingsPage() {
           method: "GET",
           headers: {
             Accept: "application/json",
-            Authorization: `Bearer ${accessToken}`,
+            Authorization: `Bearer ${token}`,
           },
           signal: controller.signal,
         });
 
         if (response.status === 401 || response.status === 403) {
-          if (!controller.signal.aborted) {
-            setState({
-              token: accessToken,
-              version: refresh,
-              error:
-                response.status === 401
-                  ? "انتهت صلاحية تسجيل الدخول. سجّل دخولك مجدداً لعرض حجوزاتك."
-                  : "لا تملك صلاحية عرض الحجوزات بهذا الحساب.",
-              requiresLogin: response.status === 401,
-              bookings: [],
-            });
-          }
+          setState({
+            loading: false,
+            guest: true,
+            error: "",
+            bookings: [],
+          });
           return;
         }
 
@@ -479,39 +490,32 @@ export default function MyBookingsPage() {
           throw new Error(`فشل تحميل الحجوزات (HTTP ${response.status}).`);
         }
 
-        // بعض الـ APIs تعيد 204 بدلاً من قائمة فارغة.
         if (response.status === 204) {
-          if (!controller.signal.aborted) {
-            setState({
-              token: accessToken,
-              version: refresh,
-              error: "",
-              requiresLogin: false,
-              bookings: [],
-            });
-          }
+          setState({
+            loading: false,
+            guest: false,
+            error: "",
+            bookings: [],
+          });
           return;
         }
 
         const payload = await response.json();
+
         const bookings = getList(payload).map(bookingData);
 
-        if (!controller.signal.aborted) {
-          setState({
-            token: accessToken,
-            version: refresh,
-            error: "",
-            requiresLogin: false,
-            bookings,
-          });
-        }
+        setState({
+          loading: false,
+          guest: false,
+          error: "",
+          bookings,
+        });
       } catch (error) {
-        if (error?.name !== "AbortError" && !controller.signal.aborted) {
+        if (error?.name !== "AbortError") {
           setState({
-            token: accessToken,
-            version: refresh,
+            loading: false,
+            guest: false,
             error: error.message || "تعذّر تحميل الحجوزات.",
-            requiresLogin: false,
             bookings: [],
           });
         }
@@ -519,10 +523,20 @@ export default function MyBookingsPage() {
     }
 
     load();
+
     return () => controller.abort();
-  }, [accessToken, refresh]);
+  }, [refresh]);
 
   function retry() {
+    const guest = !readToken();
+
+    setState({
+      loading: !guest,
+      guest,
+      error: "",
+      bookings: [],
+    });
+
     setRefresh((count) => count + 1);
   }
 
@@ -577,30 +591,32 @@ export default function MyBookingsPage() {
         </div>
 
         {/* جاري التحميل */}
-        {!isAuthenticated ? (
-          /* المستخدم غير مسجل دخول */
-          <div className={`${panel} p-10 text-center`}>
-            <LogIn size={42} className="mx-auto mb-4 text-primary" />
-            <h3 className="text-lg font-black">سجّل دخولك لتشوف حجوزاتك</h3>
-            <p className="mx-auto mt-2 max-w-sm text-xs leading-6 text-muted">
-              رحلاتك محفوظة بحسابك، وبتظهر هون بعد تسجيل الدخول.
-            </p>
-            <Link
-              to="/login"
-              state={{ from: "/trips" }}
-              className={`${mainButton} mt-5`}
-            >
-              <LogIn size={17} />
-              تسجيل الدخول
-            </Link>
-          </div>
-        ) : loading ? (
+        {state.loading ? (
           <div
             role="status"
             className={`${panel} flex items-center justify-center gap-3 p-12 text-xs text-muted`}
           >
             <LoaderCircle size={20} className="animate-spin text-primary" />
             جاري تحميل الحجوزات...
+          </div>
+        ) : state.guest ? (
+          /* المستخدم غير مسجل دخول */
+          <div className={`${panel} p-10 text-center`}>
+            <LogIn size={42} className="mx-auto mb-4 text-primary" />
+
+            <h3 className="text-lg font-black">سجّل دخولك لتشوف حجوزاتك</h3>
+
+            <p className="mx-auto mt-2 max-w-sm text-xs leading-6 text-muted">
+              رحلاتك محفوظة بحسابك، وبتظهر هون بعد تسجيل الدخول.
+            </p>
+
+            <Link
+              to="/login?redirect=%2Ftrips"
+              className={`${mainButton} mt-5`}
+            >
+              <LogIn size={17} />
+              تسجيل الدخول
+            </Link>
           </div>
         ) : state.error ? (
           /* خطأ بالسيرفر */
@@ -611,25 +627,14 @@ export default function MyBookingsPage() {
 
             <p className="mt-2 text-xs text-muted">{state.error}</p>
 
-            {state.requiresLogin ? (
-              <Link
-                to="/login"
-                state={{ from: "/trips" }}
-                className={`${mainButton} mt-5`}
-              >
-                <LogIn size={16} />
-                تسجيل الدخول مجدداً
-              </Link>
-            ) : (
-              <button
-                type="button"
-                onClick={retry}
-                className={`${mainButton} mt-5`}
-              >
-                <RefreshCw size={16} />
-                إعادة المحاولة
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={retry}
+              className={`${mainButton} mt-5`}
+            >
+              <RefreshCw size={16} />
+              إعادة المحاولة
+            </button>
           </div>
         ) : state.bookings.length === 0 ? (
           /* لا توجد حجوزات */

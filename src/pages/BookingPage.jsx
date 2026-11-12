@@ -28,7 +28,10 @@ import {
 
 import { formatArabicDate, formatPrice } from "../data/resultsData";
 
-import { createBooking, loadSeats, loadTrip } from "../services/sairnaApi";
+import { loadSeats, loadTrip } from "../services/sairnaApi";
+
+// Website API الخاص بالمسافرين
+const API_BASE = "https://sairna.abdulrahman-hares.com/api/v1/website";
 
 const container =
   "mx-auto w-[calc(100%-34px)] max-w-[1216px] min-[651px]:w-[calc(100%-48px)] min-[1151px]:w-[calc(100%-68px)]";
@@ -37,6 +40,118 @@ const card =
   "rounded-[20px] border border-border bg-white shadow-[0_15px_55px_rgba(19,54,72,.065)] dark:border-[#254252] dark:bg-[#112b3b]";
 
 const stages = ["اختيار المقاعد", "بيانات المسافرين", "المراجعة والتأكيد"];
+
+// ========================================
+// إنشاء الحجز الحقيقي
+// ========================================
+
+async function submitBooking(tripId, seats, token) {
+  if (!token) {
+    const error = new Error("يجب تسجيل الدخول أولاً.");
+    error.status = 401;
+    throw error;
+  }
+
+  const id = Number(tripId);
+
+  if (!Number.isInteger(id) || id < 1) {
+    throw new Error("معرّف الرحلة غير صالح.");
+  }
+
+  if (!Array.isArray(seats) || seats.length < 1 || seats.length > 4) {
+    throw new Error("يمكن حجز من مقعد واحد إلى أربعة مقاعد.");
+  }
+
+  const normalizedSeats = seats.map((seat) => {
+    const seatNumber = Number(seat.seatNumber);
+    const passengerName = String(seat.passengerName ?? "").trim();
+    const passengerPhone = String(seat.passengerPhone ?? "").trim();
+
+    if (!Number.isInteger(seatNumber) || seatNumber < 1) {
+      throw new Error("رقم المقعد غير صالح.");
+    }
+
+    if (passengerName.length < 3) {
+      throw new Error("أدخل الاسم الكامل لكل مسافر.");
+    }
+
+    if (passengerPhone.replace(/\D/g, "").length < 9) {
+      throw new Error("أدخل رقم موبايل صحيح لكل مسافر.");
+    }
+
+    return {
+      seatNumber,
+      passengerName,
+      passengerPhone,
+    };
+  });
+
+  const seatNumbers = normalizedSeats.map((seat) => seat.seatNumber);
+
+  if (new Set(seatNumbers).size !== seatNumbers.length) {
+    throw new Error("لا يمكن حجز المقعد نفسه مرتين.");
+  }
+
+  let response;
+
+  try {
+    response = await fetch(`${API_BASE}/bookings`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        tripId: id,
+        seats: normalizedSeats,
+      }),
+    });
+  } catch (error) {
+    throw new Error(
+      "تعذّر الاتصال بالسيرفر. تحقق من اتصالك وحالة الحجز قبل إعادة المحاولة.",
+      { cause: error },
+    );
+  }
+
+  const responseText = await response.text();
+
+  let result = null;
+
+  if (responseText) {
+    try {
+      result = JSON.parse(responseText);
+    } catch {
+      result = null;
+    }
+  }
+
+  if (!response.ok) {
+    let message =
+      result?.message ??
+      result?.error?.message ??
+      `فشل إنشاء الحجز (HTTP ${response.status}).`;
+
+    if (Array.isArray(message)) {
+      message = message.join("، ");
+    }
+
+    if (response.status === 401) {
+      message = "جلسة تسجيل الدخول غير صالحة. سجّل دخولك مجدداً.";
+    } else if (response.status === 403) {
+      message = "هذا الحساب غير مخوّل بإنشاء الحجز.";
+    } else if (response.status === 409) {
+      message = "بعض المقاعد لم تعد متاحة. اختر مقاعد ثانية.";
+    }
+
+    const error = new Error(String(message));
+    error.status = response.status;
+    throw error;
+  }
+
+  // استجابة النجاح الموثقة في Swagger هي 201
+  return result;
+}
 
 // ========================================
 // شريط مراحل الحجز
@@ -414,11 +529,11 @@ function BookingReview({ passengers, selected, payment, onPaymentChange }) {
 // ========================================
 
 export default function BookingPage() {
+  const { accessToken, signOut } = useAuth();
   const { tripId } = useParams();
 
   const location = useLocation();
   const navigate = useNavigate();
-  const { accessToken, signOut } = useAuth();
 
   const [params] = useSearchParams();
 
@@ -592,8 +707,7 @@ export default function BookingPage() {
     }
   }
 
-  // الانتقال إلى تسجيل الدخول مع حفظ مسودة الحجز داخل React Router state.
-  // LoginPage يجب أن يعيد نفس الـ state عند الرجوع (انظر التعديل المرفق).
+  // الذهاب إلى تسجيل الدخول مع الاحتفاظ بمكان المستخدم ومسودة الحجز
   function goToLogin() {
     const from = `${location.pathname}${location.search}${location.hash}`;
 
@@ -632,8 +746,11 @@ export default function BookingPage() {
       return;
     }
 
-    // نفس التوكن المستخدم في الهيدر وصفحة حجوزاتي.
-    if (!accessToken) {
+    // القراءة من نظام الدخول المشترك بدل مفتاح التخزين القديم
+    const token = accessToken;
+
+    // المستخدم غير مسجل دخول
+    if (!token) {
       goToLogin();
       return;
     }
@@ -672,7 +789,7 @@ export default function BookingPage() {
       }));
 
       // تنفيذ POST /bookings الحقيقي
-      await createBooking({ tripId, seats: bookingSeats }, accessToken);
+      await submitBooking(tripId, bookingSeats, token);
 
       // ما منوصل هون إلا إذا السيرفر قبل الطلب
       setBookingConfirmed(true);
@@ -680,7 +797,6 @@ export default function BookingPage() {
     } catch (error) {
       // جلسة منتهية أو غير صالحة
       if (error.status === 401) {
-        // امسح الجلسة من AuthContext بدل مفتاح التوكن القديم.
         signOut();
         goToLogin();
         return;
