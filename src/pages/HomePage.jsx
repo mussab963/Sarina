@@ -1,4 +1,8 @@
+import Destinations from "../components/home/Destinations";
 import Hero from "../components/home/Hero";
+import HomeCTA from "../components/home/HomeCTA";
+import HowItWorks from "../components/home/HowItWorks";
+import TrackingPreview from "../components/maps/TrackingPreview";
 
 const metrics = [
   { value: "14", label: "محافظة سورية" },
@@ -71,6 +75,10 @@ function HomePage() {
           ))}
         </div>
       </section>
+      <Destinations />
+      <HowItWorks />
+      <TrackingPreview />
+      <HomeCTA />
     </main>
   );
 }
