@@ -368,10 +368,26 @@ function BookingCard({ booking }) {
           {expanded ? "إخفاء التفاصيل" : "عرض التذكرة"}
         </button>
 
-        <span className="inline-flex min-h-[39px] items-center gap-2 rounded-lg bg-[#f2f7f8] px-4 text-[11px] text-muted dark:bg-[#173748]">
+        <Link
+          to="/tracking"
+          state={{
+            booking: {
+              id: booking.id,
+              origin: booking.origin,
+              destination: booking.destination,
+              departure: booking.departure,
+              arrival: booking.arrival,
+              date: booking.date,
+              company: booking.company,
+              status: booking.status,
+            },
+          }}
+          className="inline-flex min-h-[39px] items-center gap-2 rounded-lg bg-[#e6f8f3] px-4 text-[11px] font-black text-[#078e87] transition hover:bg-[#d4f2eb]"
+        >
           <Route size={17} />
-          التتبّع قريباً
-        </span>
+          تتبّع الرحلة
+        </Link>
+        
       </div>
 
       {/* تفاصيل التذكرة */}
