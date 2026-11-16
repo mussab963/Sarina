@@ -16,17 +16,12 @@ const container =
 
 export default function TrackingPage() {
   const location = useLocation();
-
   const booking = location.state?.booking ?? null;
-
   const origin = booking?.origin || null;
   const destination = booking?.destination || null;
-
   const hasRoute = Boolean(origin && destination);
-
   const [progress, setProgress] = useState(0);
   const [playing, setPlaying] = useState(false);
-
   const completed = progress >= 100;
 
   useEffect(() => {

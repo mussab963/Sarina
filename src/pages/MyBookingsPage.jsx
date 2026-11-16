@@ -261,10 +261,7 @@ function statusInfo(value) {
   };
 }
 
-// =====================================
 // بطاقة حجز واحدة
-// =====================================
-
 function BookingCard({ booking }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -387,7 +384,6 @@ function BookingCard({ booking }) {
           <Route size={17} />
           تتبّع الرحلة
         </Link>
-        
       </div>
 
       {/* تفاصيل التذكرة */}
@@ -436,18 +432,12 @@ function BookingCard({ booking }) {
   );
 }
 
-// =====================================
 // صفحة حجوزاتي
-// =====================================
-
 export default function MyBookingsPage() {
   const { accessToken, signOut } = useAuth();
   const [state, setState] = useState(() => {
-    const guest = !accessToken;
-
     return {
-      loading: !guest,
-      guest,
+      loading: Boolean(accessToken),
       error: "",
       bookings: [],
     };
@@ -473,21 +463,18 @@ export default function MyBookingsPage() {
           },
           signal: controller.signal,
         });
-
-        if (response.status === 401 || response.status === 403) {
-          setState({
-            loading: false,
-            guest: true,
-            error: "",
-            bookings: [],
-          });
+        // انتهت جلسة تسجيل الدخول
+        if (response.status === 401) {
+          signOut();
           return;
         }
-
+        // الحساب لا يملك صلاحية عرض الحجوزات
+        if (response.status === 403) {
+          throw new Error("هذا الحساب غير مخوّل بعرض الحجوزات.");
+        }
         if (!response.ok) {
           throw new Error(`فشل تحميل الحجوزات (HTTP ${response.status}).`);
         }
-
         if (response.status === 204) {
           setState({
             loading: false,
@@ -499,7 +486,6 @@ export default function MyBookingsPage() {
         }
 
         const payload = await response.json();
-
         const bookings = getList(payload).map(bookingData);
 
         setState({
@@ -524,11 +510,8 @@ export default function MyBookingsPage() {
   }, [accessToken, refresh, signOut]);
 
   function retry() {
-    const guest = !accessToken;
-
     setState({
-      loading: !guest,
-      guest,
+      loading: Boolean(accessToken),
       error: "",
       bookings: [],
     });

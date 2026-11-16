@@ -1,7 +1,6 @@
 import { createContext, useContext, useState } from "react";
 
 const AuthContext = createContext(null);
-
 const STORAGE_KEY = "sairna-auth";
 
 function getSavedSession() {
@@ -75,9 +74,7 @@ export function AuthProvider({ children }) {
   }
 
   const user = session ? session.user : null;
-
   const accessToken = session ? session.accessToken : null;
-
   const isAuthenticated = Boolean(accessToken);
 
   return (

@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../Context/AuthContext.jsx";
-
 import {
   Link,
   useLocation,
@@ -8,7 +7,6 @@ import {
   useParams,
   useSearchParams,
 } from "react-router";
-
 import {
   Armchair,
   ArrowLeft,
@@ -19,19 +17,15 @@ import {
   ChevronLeft,
   CreditCard,
   LoaderCircle,
+  RefreshCw,
   ShieldCheck,
   Ticket,
   UserRound,
   Users,
   Wallet,
 } from "lucide-react";
-
 import { formatArabicDate, formatPrice } from "../data/resultsData";
-
-import { loadSeats, loadTrip } from "../services/sairnaApi";
-
-// Website API الخاص بالمسافرين
-const API_BASE = "https://sairna.abdulrahman-hares.com/api/v1/website";
+import { createBooking, loadSeats, loadTrip } from "../services/sairnaApi";
 
 const container =
   "mx-auto w-[calc(100%-34px)] max-w-[1216px] min-[651px]:w-[calc(100%-48px)] min-[1151px]:w-[calc(100%-68px)]";
@@ -41,122 +35,7 @@ const card =
 
 const stages = ["اختيار المقاعد", "بيانات المسافرين", "المراجعة والتأكيد"];
 
-// ========================================
-// إنشاء الحجز الحقيقي
-// ========================================
-
-async function submitBooking(tripId, seats, token) {
-  if (!token) {
-    const error = new Error("يجب تسجيل الدخول أولاً.");
-    error.status = 401;
-    throw error;
-  }
-
-  const id = Number(tripId);
-
-  if (!Number.isInteger(id) || id < 1) {
-    throw new Error("معرّف الرحلة غير صالح.");
-  }
-
-  if (!Array.isArray(seats) || seats.length < 1 || seats.length > 4) {
-    throw new Error("يمكن حجز من مقعد واحد إلى أربعة مقاعد.");
-  }
-
-  const normalizedSeats = seats.map((seat) => {
-    const seatNumber = Number(seat.seatNumber);
-    const passengerName = String(seat.passengerName ?? "").trim();
-    const passengerPhone = String(seat.passengerPhone ?? "").trim();
-
-    if (!Number.isInteger(seatNumber) || seatNumber < 1) {
-      throw new Error("رقم المقعد غير صالح.");
-    }
-
-    if (passengerName.length < 3) {
-      throw new Error("أدخل الاسم الكامل لكل مسافر.");
-    }
-
-    if (passengerPhone.replace(/\D/g, "").length < 9) {
-      throw new Error("أدخل رقم موبايل صحيح لكل مسافر.");
-    }
-
-    return {
-      seatNumber,
-      passengerName,
-      passengerPhone,
-    };
-  });
-
-  const seatNumbers = normalizedSeats.map((seat) => seat.seatNumber);
-
-  if (new Set(seatNumbers).size !== seatNumbers.length) {
-    throw new Error("لا يمكن حجز المقعد نفسه مرتين.");
-  }
-
-  let response;
-
-  try {
-    response = await fetch(`${API_BASE}/bookings`, {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        tripId: id,
-        seats: normalizedSeats,
-      }),
-    });
-  } catch (error) {
-    throw new Error(
-      "تعذّر الاتصال بالسيرفر. تحقق من اتصالك وحالة الحجز قبل إعادة المحاولة.",
-      { cause: error },
-    );
-  }
-
-  const responseText = await response.text();
-
-  let result = null;
-
-  if (responseText) {
-    try {
-      result = JSON.parse(responseText);
-    } catch {
-      result = null;
-    }
-  }
-
-  if (!response.ok) {
-    let message =
-      result?.message ??
-      result?.error?.message ??
-      `فشل إنشاء الحجز (HTTP ${response.status}).`;
-
-    if (Array.isArray(message)) {
-      message = message.join("، ");
-    }
-
-    if (response.status === 401) {
-      message = "جلسة تسجيل الدخول غير صالحة. سجّل دخولك مجدداً.";
-    } else if (response.status === 403) {
-      message = "هذا الحساب غير مخوّل بإنشاء الحجز.";
-    } else if (response.status === 409) {
-      message = "بعض المقاعد لم تعد متاحة. اختر مقاعد ثانية.";
-    }
-
-    const error = new Error(String(message));
-    error.status = response.status;
-    throw error;
-  }
-
-  // استجابة النجاح الموثقة في Swagger هي 201
-  return result;
-}
-
-// ========================================
 // شريط مراحل الحجز
-// ========================================
-
 function BookingSteps({ current }) {
   return (
     <div className="my-[30px] flex flex-wrap items-center justify-center gap-2 sm:gap-4">
@@ -190,10 +69,7 @@ function BookingSteps({ current }) {
   );
 }
 
-// ========================================
 // ملخص الحجز
-// ========================================
-
 function BookingSummary({ trip, people, selected }) {
   return (
     <aside className={`${card} h-fit p-[20px] lg:sticky lg:top-24`}>
@@ -263,10 +139,7 @@ function BookingSummary({ trip, people, selected }) {
   );
 }
 
-// ========================================
 // اختيار المقاعد
-// ========================================
-
 function SeatMap({ seats, selected, people, onToggle }) {
   const rows = Array.from({ length: Math.ceil(seats.length / 4) }, (_, index) =>
     seats.slice(index * 4, index * 4 + 4),
@@ -365,10 +238,7 @@ function SeatMap({ seats, selected, people, onToggle }) {
   );
 }
 
-// ========================================
 // بيانات المسافرين
-// ========================================
-
 function PassengersForm({ passengers, selected, onUpdate }) {
   return (
     <div className="space-y-4">
@@ -426,10 +296,7 @@ function PassengersForm({ passengers, selected, onUpdate }) {
   );
 }
 
-// ========================================
 // المراجعة وطريقة الحجز
-// ========================================
-
 function BookingReview({ passengers, selected, payment, onPaymentChange }) {
   const paymentOptions = [
     {
@@ -523,11 +390,16 @@ function BookingReview({ passengers, selected, payment, onPaymentChange }) {
     </div>
   );
 }
+// التحقق من صحة بيانات جميع المسافرين
+function passengersAreValid(passengers) {
+  return passengers.every(
+    (person) =>
+      person.name.trim().length >= 3 &&
+      person.phone.replace(/\D/g, "").length >= 9,
+  );
+}
 
-// ========================================
 // الصفحة الرئيسية للحجز
-// ========================================
-
 export default function BookingPage() {
   const { accessToken, signOut } = useAuth();
   const { tripId } = useParams();
@@ -579,6 +451,7 @@ export default function BookingPage() {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [bookingConfirmed, setBookingConfirmed] = useState(false);
+  const [reload, setReload] = useState(0);
 
   // تحميل الرحلة والمقاعد الحقيقية
   useEffect(() => {
@@ -608,19 +481,32 @@ export default function BookingPage() {
       });
 
     return () => controller.abort();
-  }, [tripId, location.state?.trip]);
+  }, [tripId, location.state?.trip, reload]);
 
   // اختيار أو إلغاء مقعد
+
   function toggleSeat(number) {
     setMessage("");
 
-    setSelected((current) =>
-      current.includes(number)
-        ? current.filter((item) => item !== number)
-        : current.length >= people
-          ? current
-          : [...current, number],
-    );
+    setSelected((current) => {
+      // إذا ضغط على مقعد مختار، نلغي اختياره
+      if (current.includes(number)) {
+        return current.filter((item) => item !== number);
+      }
+
+      // إذا مسافر واحد، المقعد الجديد يحل محل القديم
+      if (people === 1) {
+        return [number];
+      }
+
+      // إذا عدة مسافرين، نضيف المقعد حتى نصل للعدد المطلوب
+      if (current.length < people) {
+        return [...current, number];
+      }
+
+      // إذا اكتمل العدد، يجب إلغاء مقعد أولاً
+      return current;
+    });
   }
 
   // تحديث بيانات المسافرين
@@ -670,15 +556,12 @@ export default function BookingPage() {
   // الانتقال بين المراحل
   async function next() {
     setMessage("");
-
     if (step === 0) {
       if (selected.length !== people) {
         setMessage(`اختار ${people} مقعد قبل المتابعة.`);
         return;
       }
-
       setBusy(true);
-
       try {
         await verifySeats();
         setStep(1);
@@ -687,22 +570,13 @@ export default function BookingPage() {
       } finally {
         setBusy(false);
       }
-
       return;
     }
-
     if (step === 1) {
-      if (
-        passengers.some(
-          (person) =>
-            person.name.trim().length < 3 ||
-            person.phone.replace(/\D/g, "").length < 9,
-        )
-      ) {
+      if (!passengersAreValid(passengers)) {
         setMessage("أدخل الاسم الكامل ورقم هاتف صحيح لكل مسافر.");
         return;
       }
-
       setStep(2);
     }
   }
@@ -726,18 +600,13 @@ export default function BookingPage() {
     });
   }
 
-  // ========================================
   // تأكيد الحجز الحقيقي
-  // ========================================
-
   async function confirm() {
     // منع إرسال الحجز مرتين من نفس الشاشة
     if (busy || bookingConfirmed) {
       return;
     }
-
     setMessage("");
-
     // لا يوجد دفع إلكتروني حقيقي
     if (payment === "demo") {
       setMessage(
@@ -745,7 +614,6 @@ export default function BookingPage() {
       );
       return;
     }
-
     // القراءة من نظام الدخول المشترك بدل مفتاح التخزين القديم
     const token = accessToken;
 
@@ -763,13 +631,7 @@ export default function BookingPage() {
     }
 
     // تحقق نهائي من بيانات المسافرين
-    if (
-      passengers.some(
-        (person) =>
-          person.name.trim().length < 3 ||
-          person.phone.replace(/\D/g, "").length < 9,
-      )
-    ) {
+    if (!passengersAreValid(passengers)) {
       setStep(1);
       setMessage("راجع الاسم الكامل ورقم الموبايل لكل مسافر.");
       return;
@@ -787,9 +649,7 @@ export default function BookingPage() {
         passengerName: passengers[index].name.trim(),
         passengerPhone: passengers[index].phone.trim(),
       }));
-
-      // تنفيذ POST /bookings الحقيقي
-      await submitBooking(tripId, bookingSeats, token);
+      await createBooking({ tripId, seats: bookingSeats }, token);
 
       // ما منوصل هون إلا إذا السيرفر قبل الطلب
       setBookingConfirmed(true);
@@ -875,9 +735,28 @@ export default function BookingPage() {
         ) : request.error ? (
           <div
             role="alert"
-            className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-800"
+            className="rounded-xl border border-red-200 bg-red-50 p-6 text-center text-sm text-red-800"
           >
-            {request.error}
+            <p className="font-bold">تعذّر تحميل بيانات الرحلة أو المقاعد.</p>
+
+            <p className="mt-2 text-xs">{request.error}</p>
+
+            <button
+              type="button"
+              onClick={() => {
+                setRequest((current) => ({
+                  ...current,
+                  loading: true,
+                  error: "",
+                }));
+
+                setReload((current) => current + 1);
+              }}
+              className="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-xs font-black text-white transition hover:opacity-90"
+            >
+              <RefreshCw size={17} />
+              إعادة المحاولة
+            </button>
           </div>
         ) : trip ? (
           <div className="grid items-start gap-[21px] lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -931,13 +810,23 @@ export default function BookingPage() {
                     حسابك.
                   </p>
 
-                  <Link
-                    to="/"
-                    className="mt-5 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-xs font-black text-white"
-                  >
-                    <ArrowRight size={16} />
-                    العودة للرئيسية
-                  </Link>
+                  <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+                    <Link
+                      to="/trips"
+                      className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-xs font-black text-white transition hover:opacity-90"
+                    >
+                      <Ticket size={17} />
+                      عرض حجوزاتي
+                    </Link>
+
+                    <Link
+                      to="/"
+                      className="inline-flex items-center gap-2 rounded-xl border border-emerald-300 bg-white px-5 py-3 text-xs font-black text-emerald-800 transition hover:bg-emerald-100"
+                    >
+                      <ArrowRight size={16} />
+                      العودة للرئيسية
+                    </Link>
+                  </div>
                 </div>
               ) : (
                 <>

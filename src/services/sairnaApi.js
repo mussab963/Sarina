@@ -1,12 +1,4 @@
-
-/**
- * Sairna Website API
- * الاتصال بالـ Backend الخاص بالمسافرين.
- * لا نستخدم بيانات Dashboard أو Admin هنا.
- */
-
-const API_BASE =
-  "https://sairna.abdulrahman-hares.com/api/v1/website";
+const API_BASE = "https://sairna.abdulrahman-hares.com/api/v1/website";
 
 // إرسال طلب GET
 async function get(path, signal) {
@@ -27,23 +19,18 @@ async function get(path, signal) {
 
     throw new Error(
       "تعذّر الاتصال بالسيرفر. تحقق من الإنترنت أو إعدادات CORS.",
-      { cause: error }
+      { cause: error },
     );
   }
 
   if (!response.ok) {
-    throw new Error(
-      `فشل جلب البيانات (HTTP ${response.status})`
-    );
+    throw new Error(`فشل جلب البيانات (HTTP ${response.status})`);
   }
 
   try {
     return await response.json();
   } catch (error) {
-    throw new Error(
-      "استجابة السيرفر ليست JSON صالحاً.",
-      { cause: error }
-    );
+    throw new Error("استجابة السيرفر ليست JSON صالحاً.", { cause: error });
   }
 }
 
@@ -52,11 +39,7 @@ function unwrap(payload) {
   let value = payload;
 
   for (let i = 0; i < 4; i += 1) {
-    if (
-      !value ||
-      typeof value !== "object" ||
-      Array.isArray(value)
-    ) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
       break;
     }
 
@@ -96,19 +79,16 @@ function collection(payload, names) {
   }
 
   throw new Error(
-    `تعذّر قراءة القائمة من السيرفر. الحقول: ${Object.keys(
-      root ?? {}
-    ).join(", ")}`
+    `تعذّر قراءة القائمة من السيرفر. الحقول: ${Object.keys(root ?? {}).join(
+      ", ",
+    )}`,
   );
 }
 
 // اختيار أول قيمة موجودة
 function pick(...values) {
   return values.find(
-    (value) =>
-      value !== undefined &&
-      value !== null &&
-      value !== ""
+    (value) => value !== undefined && value !== null && value !== "",
   );
 }
 
@@ -117,18 +97,14 @@ function cityMapFrom(cities) {
   const map = new Map();
 
   cities.forEach((raw) => {
-    const id = pick(
-      raw.id,
-      raw.cityId,
-      raw.city_id
-    );
+    const id = pick(raw.id, raw.cityId, raw.city_id);
 
     const name = pick(
       raw.name,
       raw.nameAr,
       raw.arabicName,
       raw.cityName,
-      raw.name_ar
+      raw.name_ar,
     );
 
     if (id != null && name) {
@@ -145,18 +121,14 @@ function cityMapFrom(cities) {
 // توحيد بيانات المدينة
 function cityFrom(value, map) {
   if (value && typeof value === "object") {
-    const id = pick(
-      value.id,
-      value.cityId,
-      value.city_id
-    );
+    const id = pick(value.id, value.cityId, value.city_id);
 
     const name = pick(
       value.name,
       value.nameAr,
       value.arabicName,
       value.cityName,
-      value.name_ar
+      value.name_ar,
     );
 
     if (name) {
@@ -191,12 +163,7 @@ function companyFrom(value, companies) {
       ? value
       : companies.find(
           (company) =>
-            String(
-              pick(
-                company.id,
-                company.companyId
-              )
-            ) === String(value)
+            String(pick(company.id, company.companyId)) === String(value),
         );
 
   if (!raw) {
@@ -209,20 +176,10 @@ function companyFrom(value, companies) {
     };
   }
 
-  const id = pick(
-    raw.id,
-    raw.companyId,
-    raw.company_id
-  );
+  const id = pick(raw.id, raw.companyId, raw.company_id);
 
   const name = String(
-    pick(
-      raw.name,
-      raw.nameAr,
-      raw.companyName,
-      raw.name_ar,
-      "شركة نقل"
-    )
+    pick(raw.name, raw.nameAr, raw.companyName, raw.name_ar, "شركة نقل"),
   );
 
   return {
@@ -230,9 +187,7 @@ function companyFrom(value, companies) {
     name,
     short: name[0] || "ن",
     rating: pick(raw.rating, null),
-    features: Array.isArray(raw.features)
-      ? raw.features
-      : [],
+    features: Array.isArray(raw.features) ? raw.features : [],
   };
 }
 
@@ -241,19 +196,14 @@ function extractTime(value) {
   const text = String(value ?? "");
 
   const match =
-    text.match(/(?:T|\s)(\d{2}:\d{2})/) ??
-    text.match(/^(\d{2}:\d{2})/);
+    text.match(/(?:T|\s)(\d{2}:\d{2})/) ?? text.match(/^(\d{2}:\d{2})/);
 
   return match?.[1] ?? "";
 }
 
 // استخراج التاريخ
 function extractDate(value) {
-  return (
-    String(value ?? "").match(
-      /\d{4}-\d{2}-\d{2}/
-    )?.[0] ?? ""
-  );
+  return String(value ?? "").match(/\d{4}-\d{2}-\d{2}/)?.[0] ?? "";
 }
 
 // تحويل قيمة إلى رقم صالح
@@ -264,36 +214,20 @@ function validNumber(value) {
 
   const result = Number(value);
 
-  return Number.isFinite(result)
-    ? result
-    : null;
+  return Number.isFinite(result) ? result : null;
 }
 
 // تحويل الرحلة القادمة من السيرفر
-export function normalizeTrip(
-  payload,
-  cities = [],
-  companies = []
-) {
+export function normalizeTrip(payload, cities = [], companies = []) {
   const raw = unwrap(payload);
 
-  if (
-    !raw ||
-    typeof raw !== "object" ||
-    Array.isArray(raw)
-  ) {
-    throw new Error(
-      "تفاصيل الرحلة غير صالحة."
-    );
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error("تفاصيل الرحلة غير صالحة.");
   }
 
   const map = cityMapFrom(cities);
 
-  const id = pick(
-    raw.id,
-    raw.tripId,
-    raw.trip_id
-  );
+  const id = pick(raw.id, raw.tripId, raw.trip_id);
 
   const origin = cityFrom(
     pick(
@@ -302,13 +236,14 @@ export function normalizeTrip(
       raw.departureCity,
       raw.origin,
       raw.from,
+      raw.originId,
       raw.originCityId,
       raw.fromCityId,
       raw.origin_city_id,
       raw.route?.originCity,
-      raw.route?.fromCity
+      raw.route?.fromCity,
     ),
-    map
+    map,
   );
 
   const destination = cityFrom(
@@ -318,13 +253,14 @@ export function normalizeTrip(
       raw.arrivalCity,
       raw.destination,
       raw.to,
+      raw.destinationId,
       raw.destinationCityId,
       raw.toCityId,
       raw.destination_city_id,
       raw.route?.destinationCity,
-      raw.route?.toCity
+      raw.route?.toCity,
     ),
-    map
+    map,
   );
 
   const departureValue = pick(
@@ -333,7 +269,7 @@ export function normalizeTrip(
     raw.departureAt,
     raw.startTime,
     raw.departure,
-    raw.departureDateTime
+    raw.departureDateTime,
   );
 
   const arrivalValue = pick(
@@ -342,7 +278,7 @@ export function normalizeTrip(
     raw.arrivalAt,
     raw.endTime,
     raw.arrival,
-    raw.arrivalDateTime
+    raw.arrivalDateTime,
   );
 
   if (
@@ -352,9 +288,7 @@ export function normalizeTrip(
     !extractTime(departureValue)
   ) {
     throw new Error(
-      `حقول الرحلة غير متوافقة مع الواجهة: ${Object.keys(
-        raw
-      ).join(", ")}`
+      `حقول الرحلة غير متوافقة مع الواجهة: ${Object.keys(raw).join(", ")}`,
     );
   }
 
@@ -365,13 +299,8 @@ export function normalizeTrip(
     destination,
 
     company: companyFrom(
-      pick(
-        raw.company,
-        raw.transportCompany,
-        raw.companyId,
-        raw.company_id
-      ),
-      companies
+      pick(raw.company, raw.transportCompany, raw.companyId, raw.company_id),
+      companies,
     ),
 
     date: extractDate(
@@ -381,8 +310,8 @@ export function normalizeTrip(
         raw.departureDate,
         raw.tripDate,
         raw.departureDateTime,
-        departureValue
-      )
+        departureValue,
+      ),
     ),
 
     departure: extractTime(departureValue),
@@ -394,8 +323,8 @@ export function normalizeTrip(
         raw.ticketPrice,
         raw.pricePerSeat,
         raw.seatPrice,
-        raw.ticket_price
-      )
+        raw.ticket_price,
+      ),
     ),
 
     seats: validNumber(
@@ -403,125 +332,68 @@ export function normalizeTrip(
         raw.availableSeats,
         raw.available_seats,
         raw.seatsAvailable,
-        raw.freeSeats
-      )
+        raw.freeSeats,
+      ),
     ),
 
-    duration: validNumber(
-      pick(
-        raw.durationMinutes,
-        raw.duration_minutes
-      )
-    ),
+    duration: validNumber(pick(raw.durationMinutes, raw.duration_minutes)),
 
     status: String(raw.status ?? ""),
   };
 }
 
-// جلب الرحلات والمدن والشركات
+// جلب بيانات المدن والشركات المشتركة
+async function loadLookups(signal) {
+  const [citiesData, companiesData] = await Promise.all([
+    get("/cities", signal),
+    get("/companies", signal),
+  ]);
+
+  return {
+    cities: collection(citiesData, ["cities"]),
+    companies: collection(companiesData, ["companies"]),
+  };
+}
+
+// جلب جميع الرحلات
 export async function loadTrips(signal) {
-  const [
-    tripsPayload,
-    citiesPayload,
-    companiesPayload,
-  ] = await Promise.all([
+  const [tripsData, { cities, companies }] = await Promise.all([
     get("/trips", signal),
-    get("/cities", signal),
-    get("/companies", signal),
+    loadLookups(signal),
   ]);
 
-  const trips = collection(
-    tripsPayload,
-    ["trips"]
-  );
-
-  const cities = collection(
-    citiesPayload,
-    ["cities"]
-  );
-
-  const companies = collection(
-    companiesPayload,
-    ["companies"]
-  );
-
-  return trips.map((trip) =>
-    normalizeTrip(
-      trip,
-      cities,
-      companies
-    )
+  return collection(tripsData, ["trips"]).map((trip) =>
+    normalizeTrip(trip, cities, companies),
   );
 }
 
-// جلب رحلة واحدة
+// جلب تفاصيل رحلة واحدة من السيرفر
 export async function loadTrip(id, signal) {
-  const [
-    tripPayload,
-    citiesPayload,
-    companiesPayload,
-  ] = await Promise.all([
-    get(
-      `/trips/${encodeURIComponent(id)}`,
-      signal
-    ),
-    get("/cities", signal),
-    get("/companies", signal),
+  const [tripData, { cities, companies }] = await Promise.all([
+    get(`/trips/${encodeURIComponent(id)}`, signal),
+    loadLookups(signal),
   ]);
 
-  return normalizeTrip(
-    tripPayload,
-    collection(citiesPayload, ["cities"]),
-    collection(companiesPayload, ["companies"])
-  );
+  return normalizeTrip(tripData, cities, companies);
 }
 
-/**
- * جلب مقاعد الرحلة
- *
- * استجابة السيرفر المؤكدة:
- * {
- *   tripId,
- *   totalSeats,
- *   status,
- *   occupiedSeats,
- *   availableSeats
- * }
- */
 export async function loadSeats(id, signal) {
   const data = unwrap(
-    await get(
-      `/trips/${encodeURIComponent(id)}/seats`,
-      signal
-    )
+    await get(`/trips/${encodeURIComponent(id)}/seats`, signal),
   );
 
-  if (
-    !data ||
-    typeof data !== "object" ||
-    Array.isArray(data)
-  ) {
-    throw new Error(
-      "بيانات المقاعد غير صالحة."
-    );
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    throw new Error("بيانات المقاعد غير صالحة.");
   }
 
   const total = Number(data.totalSeats);
 
-  if (
-    !Number.isInteger(total) ||
-    total < 1 ||
-    total > 200
-  ) {
-    throw new Error(
-      "عدد المقاعد غير معروف."
-    );
+  if (!Number.isInteger(total) || total < 1 || total > 200) {
+    throw new Error("عدد المقاعد غير معروف.");
   }
 
   if (!Array.isArray(data.occupiedSeats)) {
-    throw new Error(
-      "قائمة المقاعد المحجوزة غير متوافقة مع السيرفر."
-    );
+    throw new Error("قائمة المقاعد المحجوزة غير متوافقة مع السيرفر.");
   }
 
   // أرقام المقاعد المحجوزة
@@ -529,11 +401,7 @@ export async function loadSeats(id, signal) {
     data.occupiedSeats.map((seat) => {
       const value =
         seat && typeof seat === "object"
-          ? pick(
-              seat.seatNumber,
-              seat.number,
-              seat.seat_number
-            )
+          ? pick(seat.seatNumber, seat.number, seat.seat_number)
           : seat;
 
       const number = Number(value);
@@ -544,34 +412,25 @@ export async function loadSeats(id, signal) {
         number < 1 ||
         number > total
       ) {
-        throw new Error(
-          "رقم مقعد محجوز غير صالح."
-        );
+        throw new Error("رقم مقعد محجوز غير صالح.");
       }
 
       return number;
-    })
+    }),
   );
 
   // إنشاء المقاعد للعرض على الواجهة
   // الترقيم من 1 حتى totalSeats افتراض تصميمي.
-  return Array.from(
-    { length: total },
-    (_, index) => {
-      const number = index + 1;
+  return Array.from({ length: total }, (_, index) => {
+    const number = index + 1;
 
-      return {
-        number: String(number),
-        available: !occupied.has(number),
-      };
-    }
-  );
+    return {
+      number: String(number),
+      available: !occupied.has(number),
+    };
+  });
 }
 
-/**
- * جلب شركات النقل من Website API.
- * نعرض المعلومات التي يوفرها السيرفر فقط.
- */
 export async function loadCompanies(signal) {
   const payload = await get("/companies", signal);
 
@@ -579,156 +438,92 @@ export async function loadCompanies(signal) {
 
   return rows.map((raw) => {
     if (!raw || typeof raw !== "object") {
-      throw new Error(
-        "بيانات شركة النقل غير صحيحة."
-      );
+      throw new Error("بيانات شركة النقل غير صحيحة.");
     }
 
-    const id =
-      raw.id ??
-      raw.companyId ??
-      raw.company_id;
+    const id = raw.id ?? raw.companyId ?? raw.company_id;
 
-    const name =
-      raw.name ??
-      raw.nameAr ??
-      raw.companyName ??
-      raw.name_ar;
+    const name = raw.name ?? raw.nameAr ?? raw.companyName ?? raw.name_ar;
 
     if (id == null || !name) {
       throw new Error(
-        `حقول الشركات غير متوافقة: ${Object.keys(
-          raw
-        ).join(", ")}`
+        `حقول الشركات غير متوافقة: ${Object.keys(raw).join(", ")}`,
       );
     }
 
-    const features =
-      raw.features ?? raw.amenities ?? [];
+    const features = raw.features ?? raw.amenities ?? [];
 
-    const rating =
-      raw.rating ?? raw.averageRating ?? null;
+    const rating = raw.rating ?? raw.averageRating ?? null;
 
-    const destinations =
-      raw.destinationsCount ??
-      raw.routesCount ??
-      null;
+    const destinations = raw.destinationsCount ?? raw.routesCount ?? null;
 
     return {
       id: String(id),
       name: String(name),
       short: String(name).slice(0, 1),
 
-      about: String(
-        raw.about ??
-        raw.description ??
-        raw.bio ??
-        ""
-      ),
+      about: String(raw.about ?? raw.description ?? raw.bio ?? ""),
 
       features: Array.isArray(features)
         ? features
             .map((item) =>
               typeof item === "string"
                 ? item
-                : String(
-                    item?.name ??
-                    item?.label ??
-                    ""
-                  )
+                : String(item?.name ?? item?.label ?? ""),
             )
             .filter(Boolean)
         : [],
 
       rating:
-        rating != null &&
-        Number.isFinite(Number(rating))
+        rating != null && Number.isFinite(Number(rating))
           ? Number(rating)
           : null,
 
       destinationsCount:
-        destinations != null &&
-        Number.isFinite(Number(destinations))
+        destinations != null && Number.isFinite(Number(destinations))
           ? Number(destinations)
           : null,
 
       scheduleLabel:
-        typeof raw.scheduleLabel === "string"
-          ? raw.scheduleLabel
-          : null,
+        typeof raw.scheduleLabel === "string" ? raw.scheduleLabel : null,
     };
   });
 }
 
-/**
- * إنشاء حجز حقيقي عبر Website API.
- *
- * يتطلب Access Token خاص بالمسافر.
- * يدعم من 1 إلى 4 مقاعد.
- */
-export async function createBooking(
-  { tripId, seats },
-  token,
-  signal
-) {
+export async function createBooking({ tripId, seats }, token, signal) {
   const numericTripId = Number(tripId);
 
-  if (
-    !Number.isInteger(numericTripId) ||
-    numericTripId < 1
-  ) {
+  if (!Number.isInteger(numericTripId) || numericTripId < 1) {
     throw new Error("معرّف الرحلة غير صالح.");
   }
 
-  if (
-    !Array.isArray(seats) ||
-    seats.length < 1 ||
-    seats.length > 4
-  ) {
-    throw new Error(
-      "لازم تختار من مقعد واحد لأربعة مقاعد."
-    );
+  if (!Array.isArray(seats) || seats.length < 1 || seats.length > 4) {
+    throw new Error("لازم تختار من مقعد واحد لأربعة مقاعد.");
   }
 
   if (!token || typeof token !== "string") {
-    const error = new Error(
-      "يجب تسجيل الدخول قبل تأكيد الحجز."
-    );
+    const error = new Error("يجب تسجيل الدخول قبل تأكيد الحجز.");
     error.status = 401;
     throw error;
   }
 
   const normalizedSeats = seats.map((seat) => {
     const seatNumber = Number(seat.seatNumber);
-    const passengerName = String(
-      seat.passengerName ?? ""
-    ).trim();
-    const passengerPhone = String(
-      seat.passengerPhone ?? ""
-    ).trim();
+    const passengerName = String(seat.passengerName ?? "").trim();
+    const passengerPhone = String(seat.passengerPhone ?? "").trim();
 
-    if (
-      !Number.isInteger(seatNumber) ||
-      seatNumber < 1
-    ) {
+    if (!Number.isInteger(seatNumber) || seatNumber < 1) {
       throw new Error("رقم المقعد غير صالح.");
     }
 
     if (passengerName.length < 3) {
-      throw new Error(
-        "الاسم الكامل للمسافر غير صالح."
-      );
+      throw new Error("الاسم الكامل للمسافر غير صالح.");
     }
 
-    const phoneDigits = passengerPhone.replace(
-      /\D/g,
-      ""
-    );
+    const phoneDigits = passengerPhone.replace(/\D/g, "");
 
     if (phoneDigits.length < 9) {
-      throw new Error(
-        "رقم هاتف المسافر غير صالح."
-      );
+      throw new Error("رقم هاتف المسافر غير صالح.");
     }
 
     return {
@@ -738,17 +533,10 @@ export async function createBooking(
     };
   });
 
-  const seatNumbers = normalizedSeats.map(
-    (seat) => seat.seatNumber
-  );
+  const seatNumbers = normalizedSeats.map((seat) => seat.seatNumber);
 
-  if (
-    new Set(seatNumbers).size !==
-    seatNumbers.length
-  ) {
-    throw new Error(
-      "لا يمكن حجز المقعد نفسه مرتين."
-    );
+  if (new Set(seatNumbers).size !== seatNumbers.length) {
+    throw new Error("لا يمكن حجز المقعد نفسه مرتين.");
   }
 
   let response;
@@ -772,10 +560,9 @@ export async function createBooking(
       throw error;
     }
 
-    throw new Error(
-      "تعذّر الاتصال بالسيرفر أثناء إنشاء الحجز.",
-      { cause: error }
-    );
+    throw new Error("تعذّر الاتصال بالسيرفر أثناء إنشاء الحجز.", {
+      cause: error,
+    });
   }
 
   // قد تكون استجابة النجاح JSON أو فارغة.
@@ -802,11 +589,9 @@ export async function createBooking(
     }
 
     if (response.status === 401) {
-      message =
-        "انتهت جلسة تسجيل الدخول. سجّل دخولك مجدداً.";
+      message = "انتهت جلسة تسجيل الدخول. سجّل دخولك مجدداً.";
     } else if (response.status === 403) {
-      message =
-        "هذا الحساب غير مخوّل بإنشاء حجز.";
+      message = "هذا الحساب غير مخوّل بإنشاء حجز.";
     } else if (response.status === 409) {
       message =
         "في تعارض بالحجز. ممكن تكون بعض المقاعد انحجزت، جرّب اختيار مقاعد ثانية.";

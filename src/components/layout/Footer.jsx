@@ -1,4 +1,4 @@
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { Globe, Mail, Phone } from "lucide-react";
 import logo from "../../assets/logo.svg";
 
@@ -56,8 +56,61 @@ const containerClass = `
 `;
 
 function Footer() {
+  const navigate = useNavigate();
+
+  // الصعود بنعومة قبل فتح الصفحة الجديدة
+  function handleFooterClick(event) {
+    const link = event.target.closest("a[href]");
+
+    if (
+      !link ||
+      event.button !== 0 ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+
+    // الروابط الخارجية تفتح بشكل طبيعي
+    if (link.origin !== window.location.origin) return;
+
+    const target = link.pathname + link.search + link.hash;
+
+    // إذا كنا بأعلى الصفحة ننتقل مباشرة
+    if (window.scrollY <= 0) return;
+
+    event.preventDefault();
+
+    const start = window.scrollY;
+    const duration = 900;
+    const startTime = performance.now();
+
+    function animate(now) {
+      const progress = Math.min((now - startTime) / duration, 1);
+
+      // حركة ناعمة بالبداية والنهاية
+      const smooth = 1 - Math.pow(1 - progress, 3);
+
+      window.scrollTo({
+        top: start * (1 - smooth),
+        behavior: "instant",
+      });
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        navigate(target);
+      }
+    }
+
+    requestAnimationFrame(animate);
+  }
+
   return (
     <footer
+      onClickCapture={handleFooterClick}
       className="
         bg-[#0a2c3e] pt-14
         text-[#d2e4e9]
@@ -223,7 +276,6 @@ function Footer() {
           {photoCredits.map((credit, index) => (
             <span key={credit.url}>
               {index > 0 && " · "}
-
               <a
                 href={credit.url}
                 target="_blank"

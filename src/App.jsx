@@ -1,42 +1,56 @@
 import "./App.css";
-
-import { Routes, Route } from "react-router";
-
+import { Routes, Route, Link } from "react-router";
 import MainLayout from "./layouts/MainLayout";
-
 import HomePage from "./pages/HomePage";
 import ResultsPage from "./pages/ResultsPage";
 import BookingPage from "./pages/BookingPage";
 import CompaniesPage from "./pages/CompaniesPage";
 import MyBookingsPage from "./pages/MyBookingsPage";
-
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import TrackingPage from "./pages/TrackingPage";
+import AccountPage from "./pages/AccountPage";
+import AboutPage from "./pages/AboutPage";
+import SupportPage from "./pages/SupportPage";
 
-function ComingSoon() {
+// صفحة تظهر عند فتح رابط غير موجود
+function NotFoundPage() {
   return (
-    <section className="flex min-h-[60vh] items-center justify-center px-4 text-center">
-      <div>
-        <h1 className="text-3xl font-extrabold">أهلاً بك في سيرنا</h1>
+    <main
+      dir="rtl"
+      className="flex min-h-[65vh] items-center justify-center bg-background px-4 py-16 text-center text-foreground"
+    >
+      <div className="max-w-md">
+        <h1 className="text-7xl font-black text-primary">404</h1>
 
-        <p className="mt-4 text-muted">عم ننقل صفحات المشروع إلى React</p>
+        <h2 className="mt-5 text-2xl font-black">الصفحة غير موجودة</h2>
+
+        <p className="mt-4 text-sm leading-7 text-muted">
+          يبدو أن الرابط الذي تحاول الوصول إليه غير صحيح أو أن الصفحة لم تعد
+          متاحة.
+        </p>
+
+        <Link
+          to="/"
+          className="mt-7 inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-6 py-3 text-sm font-bold text-white transition hover:opacity-90"
+        >
+          العودة إلى الرئيسية
+        </Link>
       </div>
-    </section>
+    </main>
   );
 }
 
-function App() {
+export default function App() {
   return (
     <Routes>
-      {/* صفحات تسجيل الدخول والتسجيل */}
+      {/* تسجيل الدخول وإنشاء الحساب */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
 
-      {/* صفحات الموقع الرئيسية */}
+      {/* صفحات الموقع داخل التخطيط الرئيسي */}
       <Route element={<MainLayout />}>
-        <Route path="tracking" element={<TrackingPage />} />
-        {/* الصفحة الرئيسية */}
+        {/* الرئيسية */}
         <Route index element={<HomePage />} />
 
         {/* نتائج البحث */}
@@ -51,11 +65,15 @@ function App() {
         {/* حجوزاتي */}
         <Route path="trips" element={<MyBookingsPage />} />
 
-        {/* الصفحات غير المنفذة */}
-        <Route path="*" element={<ComingSoon />} />
+        {/* تتبّع الرحلة */}
+        <Route path="tracking" element={<TrackingPage />} />
+        <Route path="account" element={<AccountPage />} />
+        <Route path="about" element={<AboutPage />} />
+        <Route path="support" element={<SupportPage />} />
+
+        {/* أي رابط غير معروف */}
+        <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
   );
 }
-
-export default App;

@@ -1,11 +1,5 @@
-
 import { useEffect, useMemo, useState } from "react";
-import {
-  Link,
-  useLocation,
-  useNavigate,
-  useSearchParams,
-} from "react-router";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router";
 
 import {
   ArrowLeft,
@@ -88,7 +82,7 @@ const companyDesign = [
 
 function CompanyLogo({ company, small = false }) {
   const design = companyDesign.find((item) =>
-    company.name.includes(item.keyword)
+    company.name.includes(item.keyword),
   );
 
   return (
@@ -131,15 +125,11 @@ function ResultsBanner() {
             </span>
 
             <h1 className="my-2 text-[36px] font-black max-[650px]:text-[27px]">
-              اختار الرحلة{" "}
-              <span className="text-primary">
-                اللي بتشبهك.
-              </span>
+              اختار الرحلة <span className="text-primary">اللي بتشبهك.</span>
             </h1>
 
             <p className="text-[13px] text-muted">
-              قارن بين الشركات والأوقات،
-              واحجز مقعدك بكل سهولة.
+              قارن بين الشركات والأوقات، واحجز مقعدك بكل سهولة.
             </p>
           </div>
 
@@ -163,10 +153,7 @@ function SearchField({ label, Icon, children }) {
         {label}
       </span>
 
-      <Icon
-        size={18}
-        className="mt-3 shrink-0 text-primary"
-      />
+      <Icon size={18} className="mt-3 shrink-0 text-primary" />
 
       {children}
     </label>
@@ -174,7 +161,7 @@ function SearchField({ label, Icon, children }) {
 }
 
 // نموذج البحث - يحتفظ بالشركة المختارة
-function ResultsSearchForm({ initial, company }) {
+function ResultsSearchForm({ initial, company, onPeopleChange }) {
   const navigate = useNavigate();
 
   const [form, setForm] = useState(initial);
@@ -192,9 +179,7 @@ function ResultsSearchForm({ initial, company }) {
     event.preventDefault();
 
     if (form.origin === form.destination) {
-      setError(
-        "مدينة الانطلاق والوصول لازم يكونوا مختلفين."
-      );
+      setError("مدينة الانطلاق والوصول لازم يكونوا مختلفين.");
       return;
     }
 
@@ -227,9 +212,7 @@ function ResultsSearchForm({ initial, company }) {
         <SearchField label="من وين؟" Icon={MapPin}>
           <select
             value={form.origin}
-            onChange={(e) =>
-              update("origin", e.target.value)
-            }
+            onChange={(e) => update("origin", e.target.value)}
             className={searchInput}
           >
             {CITIES.map((city) => (
@@ -259,9 +242,7 @@ function ResultsSearchForm({ initial, company }) {
         <SearchField label="لوين؟" Icon={MapPin}>
           <select
             value={form.destination}
-            onChange={(e) =>
-              update("destination", e.target.value)
-            }
+            onChange={(e) => update("destination", e.target.value)}
             className={searchInput}
           >
             {CITIES.map((city) => (
@@ -273,38 +254,32 @@ function ResultsSearchForm({ initial, company }) {
         </SearchField>
 
         <div className="col-span-2 min-[651px]:col-span-1">
-          <SearchField
-            label="تاريخ الرحلة"
-            Icon={CalendarDays}
-          >
+          <SearchField label="تاريخ الرحلة" Icon={CalendarDays}>
             <input
               type="date"
               min={todayISO()}
               required
               value={form.date}
-              onChange={(e) =>
-                update("date", e.target.value)
-              }
+              onChange={(e) => update("date", e.target.value)}
               className={searchInput}
             />
           </SearchField>
         </div>
 
-        <SearchField
-          label="المسافرين"
-          Icon={Users}
-        >
+        <SearchField label="المسافرين" Icon={Users}>
           <select
             value={form.people}
-            onChange={(e) =>
-              update("people", Number(e.target.value))
-            }
+            onChange={(e) => {
+              const count = Number(e.target.value);
+
+              update("people", count);
+              onPeopleChange(count);
+            }}
             className={searchInput}
           >
             {[1, 2, 3, 4].map((count) => (
               <option key={count} value={count}>
-                {count}{" "}
-                {count === 1 ? "مسافر" : "مسافرين"}
+                {count} {count === 1 ? "مسافر" : "مسافرين"}
               </option>
             ))}
           </select>
@@ -320,10 +295,7 @@ function ResultsSearchForm({ initial, company }) {
       </div>
 
       {error && (
-        <p
-          role="alert"
-          className="mt-3 text-xs text-red-600"
-        >
+        <p role="alert" className="mt-3 text-xs text-red-600">
           {error}
         </p>
       )}
@@ -332,11 +304,7 @@ function ResultsSearchForm({ initial, company }) {
 }
 
 // اختيار الشركة
-function CompanySelector({
-  companies,
-  selected,
-  onChange,
-}) {
+function CompanySelector({ companies, selected, onChange }) {
   const options = [
     {
       id: "all",
@@ -354,13 +322,10 @@ function CompanySelector({
           </span>
 
           <div>
-            <h2 className="text-[15px] font-black">
-              اختار شركة النقل
-            </h2>
+            <h2 className="text-[15px] font-black">اختار شركة النقل</h2>
 
             <p className="text-[11px] text-muted">
-              حدد الشركة اللي بتفضّلها،
-              ومنعرضلك مواعيدها المتاحة.
+              حدد الشركة اللي بتفضّلها، ومنعرضلك مواعيدها المتاحة.
             </p>
           </div>
         </div>
@@ -379,16 +344,11 @@ function CompanySelector({
             aria-pressed={selected === item.id}
             onClick={() => onChange(item.id)}
             className={`flex min-w-0 flex-col items-center gap-2 rounded-[13px] border px-2 py-[15px] transition hover:border-primary ${
-              selected === item.id
-                ? "border-primary bg-[#e6f8f3]"
-                : panel
+              selected === item.id ? "border-primary bg-[#e6f8f3]" : panel
             }`}
           >
             {item.id === "all" ? (
-              <BusFront
-                size={27}
-                className="text-primary"
-              />
+              <BusFront size={27} className="text-primary" />
             ) : (
               <CompanyLogo company={item} small />
             )}
@@ -400,10 +360,7 @@ function CompanySelector({
             <small className="flex items-center gap-1 text-[10px] text-muted">
               {item.rating != null ? (
                 <>
-                  <Star
-                    size={12}
-                    className="text-amber-500"
-                  />
+                  <Star size={12} className="text-amber-500" />
                   {item.rating}
                 </>
               ) : item.id === "all" ? (
@@ -449,15 +406,10 @@ function FiltersSidebar({
       </div>
 
       <fieldset className="mb-6">
-        <legend className="mb-3 text-xs font-black">
-          شركة النقل
-        </legend>
+        <legend className="mb-3 text-xs font-black">شركة النقل</legend>
 
         <div className="flex flex-col gap-3">
-          {[
-            { id: "all", name: "كل الشركات" },
-            ...companies,
-          ].map((item) => (
+          {[{ id: "all", name: "كل الشركات" }, ...companies].map((item) => (
             <label
               key={item.id}
               className="flex cursor-pointer items-center gap-2 text-[11px] text-muted"
@@ -475,10 +427,7 @@ function FiltersSidebar({
               <span className="mr-auto text-[10px]">
                 {item.id === "all"
                   ? trips.length
-                  : trips.filter(
-                      (trip) =>
-                        trip.company.id === item.id
-                    ).length}
+                  : trips.filter((trip) => trip.company.id === item.id).length}
               </span>
             </label>
           ))}
@@ -486,9 +435,7 @@ function FiltersSidebar({
       </fieldset>
 
       <fieldset>
-        <legend className="mb-3 text-xs font-black">
-          وقت الانطلاق
-        </legend>
+        <legend className="mb-3 text-xs font-black">وقت الانطلاق</legend>
 
         <div className="flex flex-col gap-3">
           {TIME_FILTERS.map((item) => (
@@ -512,9 +459,7 @@ function FiltersSidebar({
       <div className="mt-7 flex gap-2 rounded-xl bg-[#e6f8f3] p-3 text-[10px] text-[#078e87]">
         <ShieldCheck size={20} />
         <p>
-          <strong className="block">
-            احجز بكل وضوح
-          </strong>
+          <strong className="block">احجز بكل وضوح</strong>
           راجع تفاصيل رحلتك قبل التأكيد.
         </p>
       </div>
@@ -561,9 +506,7 @@ function TripCard({ trip, onSelect }) {
             >
               {trip.departure}
             </b>
-            <span className="text-[11px] text-muted">
-              {trip.origin.name}
-            </span>
+            <span className="text-[11px] text-muted">{trip.origin.name}</span>
           </div>
 
           <div className="flex min-w-[70px] flex-1 flex-col items-center">
@@ -577,9 +520,7 @@ function TripCard({ trip, onSelect }) {
               <span className="flex-1 border-t border-dashed border-[#b6ccd2]" />
             </div>
 
-            <small className="text-[10px] text-primary">
-              مباشرة
-            </small>
+            <small className="text-[10px] text-primary">مباشرة</small>
           </div>
 
           <div>
@@ -596,9 +537,7 @@ function TripCard({ trip, onSelect }) {
         </div>
 
         <div className="border-t border-border pt-3 min-[651px]:border-r min-[651px]:border-t-0 min-[651px]:pr-5 min-[651px]:pt-0">
-          <small className="text-[10px] text-muted">
-            السعر للشخص
-          </small>
+          <small className="text-[10px] text-muted">السعر للشخص</small>
 
           <b className="block text-[18px] font-black text-primary">
             {formatPrice(trip.price)}
@@ -607,9 +546,7 @@ function TripCard({ trip, onSelect }) {
           <span className="my-2 flex items-center gap-1 text-[10px] text-primary">
             <Armchair size={15} />
 
-            {trip.seats == null
-              ? "تحقق من المقاعد"
-              : `${trip.seats} مقعد متاح`}
+            {trip.seats == null ? "تحقق من المقاعد" : `${trip.seats} مقعد متاح`}
           </span>
 
           <button
@@ -640,12 +577,7 @@ function TripCard({ trip, onSelect }) {
 }
 
 // إدارة الرحلات والفلاتر
-function ResultsContent({
-  search,
-  invalid,
-  initialCompany,
-  companyOnly,
-}) {
+function ResultsContent({ search, invalid, initialCompany, browseAll }) {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -661,6 +593,7 @@ function ResultsContent({
   const [company, setCompany] = useState(initialCompany);
   const [time, setTime] = useState("all");
   const [sort, setSort] = useState("earliest");
+  const [selectedPeople, setSelectedPeople] = useState(search.people);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -686,66 +619,45 @@ function ResultsContent({
     return () => controller.abort();
   }, [reload]);
 
-  // الشركات الموجودة في بيانات السيرفر
+  // عرض الشركات الموجودة فعلياً في الرحلات القادمة من API
   const companies = useMemo(() => {
-    const actual = Array.from(
-      new Map(
-        server.trips.map((trip) => [
-          trip.company.id,
-          trip.company,
-        ])
-      ).values()
-    );
+    const uniqueCompanies = new Map();
 
-    const configured = companyDesign.map((design) => {
-      const match = actual.find((item) =>
-        item.name.includes(design.keyword)
-      );
+    for (const trip of server.trips) {
+      if (trip.company?.id != null) {
+        uniqueCompanies.set(trip.company.id, trip.company);
+      }
+    }
 
-      return (
-        match || {
-          id: design.key,
-          name: design.name,
-          short: design.short,
-          rating: null,
-        }
-      );
-    });
-
-    const extra = actual.filter(
-      (item) =>
-        !companyDesign.some((design) =>
-          item.name.includes(design.keyword)
-        )
-    );
-
-    return [...configured, ...extra];
+    return Array.from(uniqueCompanies.values());
   }, [server.trips]);
 
   // إذا أتينا من صفحة الشركات، نعرض كل الرحلات
   // ونطبّق فلتر الشركة فقط، بدون فرض مدن وتاريخ.
-  const trips = useMemo(() => {
-    if (companyOnly) {
-      return server.trips;
-    }
 
-    return server.trips.filter(
-      (trip) =>
-        trip.origin.name.trim() ===
-          getCity(search.origin)?.name &&
-        trip.destination.name.trim() ===
-          getCity(search.destination)?.name &&
-        trip.date === search.date &&
-        (trip.seats == null ||
-          trip.seats >= search.people)
+  const trips = useMemo(() => {
+    // إذا دخل المستخدم مباشرة، نعرض الرحلات من كل المدن والتواريخ
+    const matchingTrips = browseAll
+      ? server.trips
+      : server.trips.filter(
+          (trip) =>
+            trip.origin.name.trim() === getCity(search.origin)?.name &&
+            trip.destination.name.trim() ===
+              getCity(search.destination)?.name &&
+            trip.date === search.date,
+        );
+
+    // إظهار الرحلات التي تكفي مقاعدها لعدد المسافرين المختار
+    return matchingTrips.filter(
+      (trip) => trip.seats == null || trip.seats >= selectedPeople,
     );
   }, [
     server.trips,
-    companyOnly,
+    browseAll,
     search.origin,
     search.destination,
     search.date,
-    search.people,
+    selectedPeople,
   ]);
 
   const visible = useMemo(
@@ -755,12 +667,10 @@ function ResultsContent({
         time,
         sort,
       }),
-    [trips, company, time, sort]
+    [trips, company, time, sort],
   );
 
-  const selectedCompany = companies.find(
-    (item) => item.id === company
-  );
+  const selectedCompany = companies.find((item) => item.id === company);
 
   function reset() {
     setCompany("all");
@@ -770,14 +680,13 @@ function ResultsContent({
 
   function selectTrip(trip) {
     navigate(
-      `/booking/${encodeURIComponent(trip.id)}?people=${search.people}`,
+      `/booking/${encodeURIComponent(trip.id)}?people=${selectedPeople}`,
       {
         state: {
           trip,
-          returnTo:
-            location.pathname + location.search,
+          returnTo: location.pathname + location.search,
         },
-      }
+      },
     );
   }
 
@@ -801,6 +710,7 @@ function ResultsContent({
         <ResultsSearchForm
           initial={search}
           company={company}
+          onPeopleChange={setSelectedPeople}
         />
 
         {invalid && (
@@ -808,8 +718,7 @@ function ResultsContent({
             role="status"
             className="mt-4 rounded-lg bg-amber-50 p-3 text-xs text-amber-800"
           >
-            بعض بيانات البحث غير صحيحة،
-            استخدمنا قيماً افتراضية.
+            بعض بيانات البحث غير صحيحة، استخدمنا قيماً افتراضية.
           </p>
         )}
 
@@ -826,10 +735,9 @@ function ResultsContent({
                 ? "جاري البحث..."
                 : `${visible.length} رحلات متاحة`}
 
-              {companyOnly ? (
+              {browseAll ? (
                 <span className="rounded-lg bg-[#e6f8f3] px-3 py-1 text-xs text-[#078e87]">
-                  {selectedCompany?.name ??
-                    "الشركة المحددة"}
+                  {selectedCompany?.name ?? "كل الرحلات"}{" "}
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1 rounded-lg bg-[#e6f8f3] px-3 py-1 text-xs text-[#078e87]">
@@ -841,19 +749,18 @@ function ResultsContent({
             </h2>
 
             <p className="mt-2 flex items-center gap-2 text-[11px] text-muted">
-              {companyOnly ? (
+              {browseAll ? (
                 <>
                   <BusFront size={15} />
-                  جميع المدن والتواريخ المتوفرة
-                  للشركة. لتحديد بحث معيّن استخدم
-                  النموذج بالأعلى.
+                  جميع المدن والتواريخ المتوفرة. لتحديد بحث معيّن استخدم النموذج
+                  بالأعلى.
                 </>
               ) : (
                 <>
                   <CalendarDays size={15} />
                   {formatArabicDate(search.date)}
                   {" · "}
-                  {search.people} مسافر
+                  {selectedPeople} مسافر
                 </>
               )}
             </p>
@@ -863,14 +770,10 @@ function ResultsContent({
             ترتيب حسب
             <select
               value={sort}
-              onChange={(e) =>
-                setSort(e.target.value)
-              }
+              onChange={(e) => setSort(e.target.value)}
               className={`${panel} min-h-[42px] rounded-lg px-3 text-foreground dark:text-white`}
             >
-              <option value="earliest">
-                وقت الانطلاق
-              </option>
+              <option value="earliest">وقت الانطلاق</option>
               <option value="cheap">أقل سعر</option>
               <option value="quick">أقصر مدة</option>
             </select>
@@ -913,28 +816,18 @@ function ResultsContent({
               </div>
             ) : visible.length > 0 ? (
               visible.map((trip) => (
-                <TripCard
-                  key={trip.id}
-                  trip={trip}
-                  onSelect={selectTrip}
-                />
+                <TripCard key={trip.id} trip={trip} onSelect={selectTrip} />
               ))
             ) : (
               <div
                 className={`${panel} rounded-[20px] border-dashed p-10 text-center`}
               >
-                <SearchX
-                  size={42}
-                  className="mx-auto mb-4 text-primary"
-                />
+                <SearchX size={42} className="mx-auto mb-4 text-primary" />
 
-                <h3 className="text-lg font-black">
-                  ما في رحلات مطابقة
-                </h3>
+                <h3 className="text-lg font-black">ما في رحلات مطابقة</h3>
 
                 <p className="mt-2 text-xs text-muted">
-                  جرّب تغيير الشركة أو البحث
-                  عن تاريخ ومدن مختلفة.
+                  جرّب تغيير الشركة أو البحث عن تاريخ ومدن مختلفة.
                 </p>
 
                 <button
@@ -957,18 +850,12 @@ function ResultsContent({
 export default function ResultsPage() {
   const [params] = useSearchParams();
 
-  const { search, invalid } =
-    readSearchParams(params);
+  const { search, invalid } = readSearchParams(params);
 
-  const initialCompany =
-    params.get("company") || "all";
-
-  // رابط شركة فقط، بدون بحث محدد
-  const companyOnly =
-    params.has("company") &&
-    !params.has("origin") &&
-    !params.has("destination") &&
-    !params.has("date");
+  const initialCompany = params.get("company") || "all";
+  // عرض جميع الرحلات عند عدم تحديد مدن وتاريخ
+  const browseAll =
+    !params.has("origin") && !params.has("destination") && !params.has("date");
 
   const pageKey = [
     search.origin,
@@ -976,7 +863,7 @@ export default function ResultsPage() {
     search.date,
     search.people,
     initialCompany,
-    companyOnly,
+    browseAll,
   ].join("|");
 
   return (
@@ -985,7 +872,7 @@ export default function ResultsPage() {
       search={search}
       invalid={invalid}
       initialCompany={initialCompany}
-      companyOnly={companyOnly}
+      browseAll={browseAll}
     />
   );
 }

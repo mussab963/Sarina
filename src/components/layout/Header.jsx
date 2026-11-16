@@ -1,14 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink } from "react-router";
-import {
-  ArrowLeft,
-  ChevronLeft,
-  Menu,
-  Moon,
-  Sparkles,
-  Sun,
-  X,
-} from "lucide-react";
+import { ChevronLeft, Menu, Moon, Sparkles, Sun, X } from "lucide-react";
 
 import Logo from "../../assets/logo.svg";
 import AuthStatus from "../Auth/AuthStatus";

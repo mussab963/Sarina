@@ -46,7 +46,6 @@ export default function TrackingRouteMap({
 }) {
   const mapRef = useRef(null);
   const [status, setStatus] = useState("loading");
-
   const busMarkerRef = useRef(null);
   const progressRef = useRef(progress);
 
