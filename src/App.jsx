@@ -1,6 +1,9 @@
 import "./App.css";
 import { Routes, Route, Link } from "react-router";
+
 import MainLayout from "./layouts/MainLayout";
+
+// صفحات موقع المسافرين
 import HomePage from "./pages/HomePage";
 import ResultsPage from "./pages/ResultsPage";
 import BookingPage from "./pages/BookingPage";
@@ -13,7 +16,16 @@ import AccountPage from "./pages/AccountPage";
 import AboutPage from "./pages/AboutPage";
 import SupportPage from "./pages/SupportPage";
 
-// صفحة تظهر عند فتح رابط غير موجود
+// صفحات لوحة الإدارة - مشروع أحمد
+import DashboardLayout from "./dashboard/layouts/DashboardLayout";
+import DashboardLogin from "./dashboard/pages/DashboardLogin";
+import DashboardHome from "./dashboard/pages/DashboardHome";
+import DashboardTrips from "./dashboard/pages/DashboardTrips";
+import DashboardBookings from "./dashboard/pages/DashboardBookings";
+import DashboardCompanies from "./dashboard/pages/DashboardCompanies";
+import DashboardUsers from "./dashboard/pages/DashboardUsers";
+
+// صفحة الرابط غير الموجود
 function NotFoundPage() {
   return (
     <main
@@ -44,34 +56,33 @@ function NotFoundPage() {
 export default function App() {
   return (
     <Routes>
-      {/* تسجيل الدخول وإنشاء الحساب */}
+      {/* تسجيل دخول المسافر وإنشاء الحساب */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
 
-      {/* صفحات الموقع داخل التخطيط الرئيسي */}
+      {/* لوحة الإدارة - منفصلة عن واجهة المسافر */}
+      <Route path="/dashboard/login" element={<DashboardLogin />} />
+
+      <Route path="/dashboard" element={<DashboardLayout />}>
+        <Route index element={<DashboardHome />} />
+        <Route path="trips" element={<DashboardTrips />} />
+        <Route path="bookings" element={<DashboardBookings />} />
+        <Route path="companies" element={<DashboardCompanies />} />
+        <Route path="users" element={<DashboardUsers />} />
+      </Route>
+
+      {/* صفحات موقع المسافرين */}
       <Route element={<MainLayout />}>
-        {/* الرئيسية */}
         <Route index element={<HomePage />} />
-
-        {/* نتائج البحث */}
         <Route path="results" element={<ResultsPage />} />
-
-        {/* إتمام الحجز */}
         <Route path="booking/:tripId" element={<BookingPage />} />
-
-        {/* شركات النقل */}
         <Route path="companies" element={<CompaniesPage />} />
-
-        {/* حجوزاتي */}
         <Route path="trips" element={<MyBookingsPage />} />
-
-        {/* تتبّع الرحلة */}
         <Route path="tracking" element={<TrackingPage />} />
         <Route path="account" element={<AccountPage />} />
         <Route path="about" element={<AboutPage />} />
         <Route path="support" element={<SupportPage />} />
 
-        {/* أي رابط غير معروف */}
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
